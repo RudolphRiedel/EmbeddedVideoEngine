@@ -1,2 +1,2 @@
-# EmbddedVideoEngine
+# EmbeddedVideoEngine
 tbd
