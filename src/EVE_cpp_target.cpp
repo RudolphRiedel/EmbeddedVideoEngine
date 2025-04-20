@@ -33,6 +33,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 6.0
 - modified for BT820
 - fixed EVE5 ESP32 buffer transfers
+- fixed issue with includes
 
 
  */
@@ -41,7 +42,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #if defined (ARDUINO_METRO_M4)
 
-#include "EVE_target.h"
+#include "EVE.h"
 #include "EVE_commands.h"
 
 #include <Adafruit_ZeroDMA.h>
@@ -102,7 +103,7 @@ void EVE_start_dma_transfer(void)
 
 #if defined (ARDUINO_NUCLEO_F446RE)
 
-#include "EVE_target.h"
+#include "EVE.h"
 #include "EVE_commands.h"
 
 SPI_HandleTypeDef eve_spi_handle;
@@ -216,7 +217,7 @@ void EVE_start_dma_transfer(void)
     || defined (ARDUINO_TEENSY35) \
     || defined (ARDUINO_TEENSY40)
 
-#include "EVE_target.h"
+#include "EVE.h"
 #include <SPI.h>
 
 #if defined (EVE_DMA)
@@ -257,7 +258,7 @@ void EVE_start_dma_transfer(void)
 
 #if defined (ARDUINO_RASPBERRY_PI_PICO)
 
-#include "EVE_target.h"
+#include "EVE.h"
 #include "EVE_commands.h"
 
 void EVE_init_spi(void)
@@ -329,7 +330,6 @@ void EVE_start_dma_transfer(void)
 
 #if defined (ARDUINO_UNOR4_MINIMA) || defined (ARDUINO_UNOR4_WIFI)
 
-//#include "EVE_target.h"
 #include "EVE.h"
 #include <SPI.h>
 
@@ -486,7 +486,6 @@ void EVE_start_dma_transfer(void)
 
 #if defined (ESP32)
 
-#include "EVE_target.h"
 #include "EVE.h"
 #include <SPI.h>
 
