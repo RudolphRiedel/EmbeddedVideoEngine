@@ -2,7 +2,7 @@
 @file    EVE_target.cpp
 @brief   target specific functions for C++ targets, so far only Arduino targets
 @version 6.0
-@date    2025-04-19
+@date    2025-04-20
 @author  Rudolph Riedel
 
 @section LICENSE
@@ -32,6 +32,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 6.0
 - modified for BT820
+- fixed EVE5 ESP32 buffer transfers
 
 
  */
@@ -566,7 +567,11 @@ void EVE_start_dma_transfer(void)
 #else
 /* no DMA for Arduino, but at least we can transfer a single large buffer */
     EVE_cs_set();
+#if EVE_GEN > 4
+    SPI.writeBytes((uint8_t *) &EVE_dma_buffer[0], ((EVE_dma_buffer_index) * 4U));
+#else
     SPI.writeBytes(((uint8_t *) &EVE_dma_buffer[0]) + 1U, (((EVE_dma_buffer_index) * 4U) - 1U));
+#endif
     EVE_cs_clear();
 #endif
 }
