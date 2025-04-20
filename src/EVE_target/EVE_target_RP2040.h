@@ -116,7 +116,10 @@ static inline void spi_transmit(uint8_t data)
 /* only used for EVE5 */
 static inline void spi_transmit_32_addr(uint32_t data)
 {
-    spi_write_blocking(EVE_SPI, (uint8_t *) &(__builtin_bswap32(data)), 4U);
+    uint32_t addr;
+
+    addr = __builtin_bswap32(data);
+    spi_write_blocking(EVE_SPI, (uint8_t *) &addr, 4U);
 }
 
 static inline void spi_transmit_32(uint32_t data)
