@@ -2,7 +2,7 @@
 @file    EVE_commands.h
 @brief   contains FT8xx / BT8xx function prototypes
 @version 6.0
-@date    2025-04-19
+@date    2025-04-21
 @author  Rudolph Riedel
 
 @section LICENSE
@@ -32,6 +32,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 6.0
 - added prototypes for BT820
+- fixed EVE_cmd_textdim() to use char * instead of uint8_t *
 
 */
 
@@ -131,7 +132,7 @@ void EVE_cmd_playwav(const uint32_t ptr, const uint32_t options, const uint8_t *
 void EVE_cmd_rendertarget(const uint32_t dest, const uint16_t format, const uint16_t wid, const uint16_t hgt);
 uint32_t EVE_cmd_sdattach(const uint32_t options);
 uint32_t EVE_cmd_sdblockread(const uint32_t dest, const uint32_t source, const uint32_t num);
-void EVE_cmd_textdim(const uint32_t ptr, const uint16_t font, const uint16_t options, const uint8_t * const p_text);
+void EVE_cmd_textdim(const uint32_t ptr, const uint16_t font, const uint16_t options, const char * const p_text);
 void EVE_cmd_videostart(const uint32_t options);
 
 #endif

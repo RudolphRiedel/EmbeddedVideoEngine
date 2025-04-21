@@ -2,7 +2,7 @@
 @file    EVE_target.c
 @brief   target specific functions for plain C targets
 @version 6.0
-@date    2025-04-19
+@date    2025-04-21
 @author  Rudolph Riedel
 
 @section LICENSE
@@ -32,6 +32,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 6.0
 - modified for BT820
+- fixed DMA transfer for BT820 and ATSAM
 
  */
 
@@ -99,11 +100,12 @@ void EVE_start_dma_transfer(void)
 {
 #if EVE_GEN > 4
     dmadescriptor.BTCNT.reg = EVE_dma_buffer_index * 4U;
-    dmadescriptor.SRCADDR.reg = (uint32_t) &EVE_dma_buffer[EVE_dma_buffer_index] + 1; /* note: last entry in array + 1 */
 #else
     dmadescriptor.BTCNT.reg = (EVE_dma_buffer_index * 4U) - 1U;
-    dmadescriptor.SRCADDR.reg = (uint32_t) &EVE_dma_buffer[EVE_dma_buffer_index]; /* note: last entry in array + 1 */
 #endif
+
+    dmadescriptor.SRCADDR.reg = (uint32_t) &EVE_dma_buffer[EVE_dma_buffer_index]; /* note: last entry in array + 1 */
+
     EVE_SPI_SERCOM->SPI.CTRLB.bit.RXEN = 0; /* switch receiver off by setting RXEN to 0 which is not enable-protected */
     EVE_cs_set();
     DMAC->CHCTRLA.bit.ENABLE = 1; /* start sending out EVE_dma_buffer ?*/
@@ -184,11 +186,11 @@ void EVE_start_dma_transfer(void)
 {
 #if EVE_GEN > 4
     dmadescriptor.BTCNT.reg = (EVE_dma_buffer_index * 4U);
-    dmadescriptor.SRCADDR.reg = (uint32_t) &EVE_dma_buffer[EVE_dma_buffer_index] + 1; /* note: last entry in array + 1 */
 #else
     dmadescriptor.BTCNT.reg = (EVE_dma_buffer_index * 4U) - 1U;
-    dmadescriptor.SRCADDR.reg = (uint32_t) &EVE_dma_buffer[EVE_dma_buffer_index]; /* note: last entry in array + 1 */
 #endif
+
+    dmadescriptor.SRCADDR.reg = (uint32_t) &EVE_dma_buffer[EVE_dma_buffer_index]; /* note: last entry in array + 1 */
 
     EVE_SPI_SERCOM->SPI.CTRLB.bit.RXEN = 0; /* switch receiver off by setting RXEN to 0 which is not enable-protected */
     EVE_cs_set();

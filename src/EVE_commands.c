@@ -2,7 +2,7 @@
 @file    EVE_commands.c
 @brief   contains FT8xx / BT8xx functions
 @version 6.0
-@date    2025-04-19
+@date    2025-04-21
 @author  Rudolph Riedel
 
 @section info
@@ -39,6 +39,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 6.0
 - added EVE5 / BT82x
+- fixed EVE_cmd_textdim() to use char * instead of uint8_t *
 
 
 */
@@ -1063,7 +1064,7 @@ uint32_t EVE_cmd_sdblockread(const uint32_t dest, const uint32_t source, const u
  * @note - Includes executing the command and waiting for completion.
  * @note - Does not support burst-mode.
  */
-void EVE_cmd_textdim(const uint32_t ptr, const uint16_t font, const uint16_t options, const uint8_t * const p_text)
+void EVE_cmd_textdim(const uint32_t ptr, const uint16_t font, const uint16_t options, const char * const p_text)
 {
     eve_begin_cmd(CMD_TEXTDIM);
     spi_transmit_32(ptr);
