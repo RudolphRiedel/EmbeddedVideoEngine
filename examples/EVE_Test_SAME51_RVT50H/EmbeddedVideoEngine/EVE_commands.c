@@ -537,7 +537,7 @@ uint8_t EVE_busy(void)
     }
     else
     {
-        if (space == EVE_CMD_FIFO_FULL)
+        if (EVE_CMD_FIFO_FULL == space)
         {
             ret = E_OK;
         }

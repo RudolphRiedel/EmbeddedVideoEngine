@@ -437,7 +437,7 @@ void TFT_display(void)
         EVE_cmd_number_burst(104, EVE_VSIZE - 35, 26, EVE_OPT_RIGHTX|6U, num_profile_a); /* duration in us of TFT_loop() for the touch-event part */
         EVE_cmd_number_burst(104, EVE_VSIZE - 20, 26, EVE_OPT_RIGHTX|6U, num_profile_b); /* duration in us of TFT_loop() for the display-list part */
 
-        EVE_displayt_burst(); /* mark the end of the display list */
+        EVE_display_burst(); /* mark the end of the display list */
         EVE_cmd_swap_burst(); /* make this list active */
 
         EVE_end_cmd_burst(); /* stop writing to the cmd-fifo, the cmd-FIFO will be executed automatically after this or when DMA is done */

@@ -1,10 +1,10 @@
 # EVE2 / EVE3 / EVE4 / EVE5 code library
 This is a code library for EVE2/EVE3/EVE4/EVE5 graphics controller ICs from FTDI/Bridgetek:
 
-http://www.ftdichip.com/EVE.htm
-http://brtchip.com/eve/
-http://brtchip.com/ft81x/
-https://brtchip.com/bt81x/
+https://brtchip.com/product-category/products/ic/eve2-ic/
+https://brtchip.com/product-category/products/ic/eve3-ic/
+https://brtchip.com/product-category/products/ic/eve4-ic/
+https://brtchip.com/product/bt820b/
 
 It contains code for and has been used with various micro-controllers and displays.
 
@@ -18,7 +18,7 @@ The TFTs tested so far:
 VM820C + 7" 1024x600 + cap-touch
 
 
-## This is version 5
+## This is version 6
 
 This is version 6 of this code library and this is the initial upload.
 

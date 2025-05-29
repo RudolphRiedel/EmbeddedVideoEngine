@@ -94,7 +94,7 @@ void EVE_cmdWrite(uint8_t const command, uint8_t const parameter)
     EVE_cs_clear();
 }
 
-#define READ_TIMOUT ((uint8_t) 0x10U)
+#define READ_TIMEOUT ((uint8_t) 0x10U)
 
 /**
  * @brief Implementation of rd8() function, reads 8 bits.
@@ -109,7 +109,7 @@ uint8_t EVE_memRead8(uint32_t const ft_address)
     spi_transmit_32_addr(ft_address);
 
     /* BT82x read protocoll: read data untill either 0x01 is returned or a timeout is reached */
-    for (timeout = 0U; timeout < READ_TIMOUT; timeout++)
+    for (timeout = 0U; timeout < READ_TIMEOUT; timeout++)
     {
         data = spi_receive(DUMMY_BYTE);
 
@@ -119,7 +119,7 @@ uint8_t EVE_memRead8(uint32_t const ft_address)
         }
     }
 
-    if (timeout < READ_TIMOUT)
+    if (timeout < READ_TIMEOUT)
     {
         data = spi_receive(DUMMY_BYTE); /* read data byte by sending dummy byte */
     }
@@ -144,7 +144,7 @@ uint16_t EVE_memRead16(uint32_t const ft_address)
     EVE_cs_set();
     spi_transmit_32_addr(ft_address);
 
-    for (timeout = 0U; timeout < READ_TIMOUT; timeout++)
+    for (timeout = 0U; timeout < READ_TIMEOUT; timeout++)
     {
         data = spi_receive(DUMMY_BYTE);
 
@@ -155,7 +155,7 @@ uint16_t EVE_memRead16(uint32_t const ft_address)
     }
 
     /* BT82x read protocoll: read data untill either 0x01 is returned or a timeout is reached */
-    if (timeout < READ_TIMOUT)
+    if (timeout < READ_TIMEOUT)
     {
         uint8_t const lowbyte = spi_receive(DUMMY_BYTE); /* read low byte */
         uint8_t const hibyte = spi_receive(DUMMY_BYTE); /* read high byte */
@@ -185,7 +185,7 @@ uint32_t EVE_memRead32(uint32_t const ft_address)
     //spi_transmit_32(0UL);
     //spi_transmit(DUMMY_BYTE);
 
-    for (timeout = 0U; timeout < READ_TIMOUT; timeout++)
+    for (timeout = 0U; timeout < READ_TIMEOUT; timeout++)
     {
         data = spi_receive(DUMMY_BYTE);
 
@@ -195,7 +195,7 @@ uint32_t EVE_memRead32(uint32_t const ft_address)
         }
     }
 
-    if (timeout < READ_TIMOUT)
+    if (timeout < READ_TIMEOUT)
     {
         data = ((uint32_t) spi_receive(DUMMY_BYTE)); /* read low byte */
         data = ((uint32_t) spi_receive(DUMMY_BYTE) << 8U) | data;
@@ -286,7 +286,7 @@ void EVE_memRead_sram_buffer(uint32_t const ft_address, uint8_t * const p_data, 
         spi_transmit_32_addr(ft_address);
 
         /* BT82x read protocoll: read data untill either 0x01 is returned or a timeout is reached */
-        for (timeout = 0U; timeout < READ_TIMOUT; timeout++)
+        for (timeout = 0U; timeout < READ_TIMEOUT; timeout++)
         {
             data = spi_receive(DUMMY_BYTE);
 
@@ -296,7 +296,7 @@ void EVE_memRead_sram_buffer(uint32_t const ft_address, uint8_t * const p_data, 
             }
         }
 
-        if (timeout < READ_TIMOUT)
+        if (timeout < READ_TIMEOUT)
         {
             uint32_t length = (len | 0x03UL);
 
@@ -537,7 +537,7 @@ uint8_t EVE_busy(void)
     }
     else
     {
-        if (space == EVE_CMD_FIFO_FULL)
+        if (EVE_CMD_FIFO_FULL == space)
         {
             ret = E_OK;
         }
