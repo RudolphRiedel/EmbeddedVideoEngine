@@ -2,7 +2,7 @@
 @file    EVE_target.h
 @brief   target specific includes, definitions and functions
 @version 6.0
-@date    2025-04-19
+@date    2025-05-30
 @author  Rudolph Riedel
 
 @section LICENSE
@@ -32,6 +32,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 6.0
 - modified for 6.0
+- improved to support Arduino Every
 
 */
 
@@ -278,8 +279,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #if defined (ARDUINO)
 
-#if defined (__AVR__)
-//#if defined (ARDUINO_AVR_UNO)
+#if defined (__AVR_XMEGA__)
+
+#include "EVE_target/EVE_target_Arduino_AVR_XMEGA.h"
+
+#elif defined (__AVR__)
 
 #include "EVE_target/EVE_target_Arduino_AVR.h"
 
