@@ -2,7 +2,7 @@
 @file    EVE.h
 @brief   Contains FT81x/BT81x/BT82x API definitions
 @version 6.0
-@date    2025-04-19
+@date    2025-06-02
 @author  Rudolph Riedel
 
 @section LICENSE
@@ -32,6 +32,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 6.0
 - adding EVE5 / BT82x
+- fixed BITMAP_SOURCE to use 24 bit and therefore allow FLASH sources on BT81x and the full memory range on BT82x
 
 */
 
@@ -174,7 +175,7 @@ static inline uint32_t BITMAP_SIZE_H(const uint16_t width, const uint16_t height
  */
 static inline uint32_t BITMAP_SOURCE(const uint32_t addr)
 {
-    return (DL_BITMAP_SOURCE | (addr & 0x3FFFFFUL));
+    return (DL_BITMAP_SOURCE | (addr & 0xFFFFFFUL));
 }
 
 /**
@@ -762,7 +763,7 @@ static inline uint32_t BITMAP_HANDLE(const uint8_t handle)
  */
 static inline uint32_t BITMAP_SOURCEH(const uint32_t addr)
 {
-    return (DL_BITMAP_SOURCEH | (addr & 0x3FFFFFUL));
+    return (DL_BITMAP_SOURCEH | (addr & 0xFFUL));
 }
 
 /**
