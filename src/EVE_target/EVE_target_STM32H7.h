@@ -2,7 +2,7 @@
 @file    EVE_target_STM32H7.h
 @brief   target specific includes, definitions and functions
 @version 6.0
-@date    2025-04-19
+@date    2025-06-20
 @author  Rudolph Riedel
 
 @section LICENSE
@@ -243,7 +243,7 @@ extern SPI_HandleTypeDef eve_spi_handle;
     #define EVE_DMA_REQUEST DMA_REQUEST_SPI6_TX
 #endif
 
-extern volatile uint32_t EVE_dma_buffer[1025U];
+extern volatile uint32_t EVE_dma_buffer[];
 extern volatile uint16_t EVE_dma_buffer_index;
 extern volatile uint8_t EVE_dma_busy;
 

@@ -2,7 +2,7 @@
 @file    EVE.h
 @brief   Contains FT81x/BT81x/BT82x API definitions
 @version 6.0
-@date    2025-06-02
+@date    2025-06-20
 @author  Rudolph Riedel
 
 @section LICENSE
@@ -33,6 +33,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 6.0
 - adding EVE5 / BT82x
 - fixed BITMAP_SOURCE to use 24 bit and therefore allow FLASH sources on BT81x and the full memory range on BT82x
+- updates to follow the new BRT_AN_086_BT82X-Series-Programming-Guide 1.1
 
 */
 
@@ -560,16 +561,16 @@ static inline uint32_t VERTEX_TRANSLATE_Y(const int32_t yco)
 /* quite a number of things are not compatible to EVE2/EVE3/EVE4 */
 
 /* Memory */
-#define EVE_RAM_G           ((uint32_t) 0x00000000UL)
-#define EVE_RAM_CMD         ((uint32_t) 0x7F000000UL)
-#define EVE_REG_CORE_R2     ((uint32_t) 0x7F004000UL)
-#define EVE_RAM_ERR_REPORT  ((uint32_t) 0x7F004800UL)
-#define EVE_REG_CORE_R1     ((uint32_t) 0x7F006000UL)
-#define EVE_RAM_DL          ((uint32_t) 0x7F008000UL)
-#define REG_LVDSTX          ((uint32_t) 0x7F800300UL)
-#define REG_SYS             ((uint32_t) 0x7F800400UL)
-#define REG_LVDSRX          ((uint32_t) 0x7F800500UL)
-#define REG_I2S             ((uint32_t) 0x7F800800UL)
+#define EVE_RAM_G       ((uint32_t) 0x00000000UL)
+#define EVE_RAM_CMD     ((uint32_t) 0x7F000000UL)
+#define EVE_REG_CORE_R2 ((uint32_t) 0x7F004000UL)
+#define EVE_RAM_REPORT  ((uint32_t) 0x7F004800UL)
+#define EVE_REG_CORE_R1 ((uint32_t) 0x7F006000UL)
+#define EVE_RAM_DL      ((uint32_t) 0x7F008000UL)
+#define REG_LVDSTX      ((uint32_t) 0x7F800300UL)
+#define REG_SYS         ((uint32_t) 0x7F800400UL)
+#define REG_LVDSRX      ((uint32_t) 0x7F800500UL)
+#define REG_I2S         ((uint32_t) 0x7F800800UL)
 
 /* Memory buffer sizes */
 #define EVE_RAM_G_SIZE      ((uint32_t) 125U*1024U*1024UL) /* top 2.5MiB of system memory are reserved */
@@ -666,22 +667,18 @@ static inline uint32_t VERTEX_TRANSLATE_Y(const int32_t yco)
 #define BITS_7BIT_MASK ((uint8_t)0x7fU)
 #define BITS_12BIT_MASK ((uint16_t)0xfffU)
 
-#define SETLVDSPLL_CPS_POS      (25U)
-#define SETLVDSPLL_PERIOD_POS   (13U)
+#define SETLVDSPLL_LOCK_DLY_POS (13U)
 #define SETLVDSPLL_RANGE_POS    (11U)
-#define SETLVDSPLL_MUL_POS  (4U)
 #define SETLVDSPLL_CLKDIV_POS   (0U)
 
-#define PLL_LOCK_PERIOD ((uint32_t) 384UL) /* reset default value */
+#define PLL_LOCK_PERIOD ((uint32_t) 0x180UL) /* reset default value */
 
-static inline uint32_t setlvdspll_value(const uint8_t cps, const uint16_t period, const uint8_t range, const uint8_t mul, const uint8_t clkdiv)
+static inline uint32_t setlvdspll_value(const uint16_t lock_dly, const uint8_t range, const uint8_t clkdiv)
 {
-    const uint32_t cpsv = ((uint32_t)(cps & BITS_2BIT_MASK) << SETLVDSPLL_CPS_POS);
-    const uint32_t periodv = ((uint32_t)(period & BITS_12BIT_MASK) << SETLVDSPLL_PERIOD_POS);
+    const uint32_t lockv = ((uint32_t)(lock_dly & BITS_12BIT_MASK) << SETLVDSPLL_LOCK_DLY_POS);
     const uint32_t rangev = ((uint32_t)(range & BITS_2BIT_MASK) << SETLVDSPLL_RANGE_POS);
-    const uint32_t mulv = ((uint32_t)(mul & BITS_7BIT_MASK) << SETLVDSPLL_MUL_POS);
     const uint32_t clkdivv = ((uint32_t)(clkdiv & BITS_4BIT_MASK) << SETLVDSPLL_CLKDIV_POS);
-    return (cpsv | periodv | rangev | mulv | clkdivv);
+    return (lockv | rangev | 0x0070ul | clkdivv);
 }
 
 #define LVDS_CH0_EN ((uint32_t) 2UL)
@@ -695,6 +692,7 @@ static inline uint32_t setlvdspll_value(const uint8_t cps, const uint16_t period
 #define EVE_PWRDOWN         ((uint8_t) 0xE2U) /* place EVE in Power Down (core off) */
 #define EVE_SETPLLSP1       ((uint8_t) 0xE4U) /* change the system PLL frequency */
 #define EVE_SETSYSCLKDIV    ((uint8_t) 0xE6U) /* change the system clock frequency */
+#define EVE_RESET_PULSE     ((uint8_t) 0xE7U) /* trigger a system reset pulse */
 #define EVE_SETBOOTCFG      ((uint8_t) 0xE8U) /* configure the REG_BOOT_CFG register to control the boot sequence */
 #define EVE_BOOTCFGEN       ((uint8_t) 0xE9U) /* safety mechanism: allow or deny configuration of REG_BOOT_CFG and REG_DDR_TYPE */
 #define EVE_SETDDRTYPE      ((uint8_t) 0xEBU) /* programs the DDR DRAM type definition register, REG_DDR_TYPE */
@@ -956,6 +954,7 @@ static inline uint32_t TAG(const uint32_t tagval)
 #define REG_LVDSRX_CORE_DITHER  ((uint32_t) 0x7F006684UL)
 #define REG_LVDSRX_CORE_ENABLE  ((uint32_t) 0x7F006670UL)
 #define REG_LVDSRX_CORE_FORMAT  ((uint32_t) 0x7F006680UL)
+#define REG_LVDSRX_CORE_FRAMES  ((uint32_t) 0x7F006698UL)
 #define REG_LVDSRX_CORE_SETUP   ((uint32_t) 0x7F006678UL)
 #define REG_LVDSRX_CTRL         ((uint32_t) 0x7F800504UL)
 #define REG_LVDSRX_SETUP        ((uint32_t) 0x7F800500UL)
@@ -1031,7 +1030,7 @@ static inline uint32_t TAG(const uint32_t tagval)
 #define REG_TAG_X               ((uint32_t) 0x7F0060BCUL)
 #define REG_TAG_Y               ((uint32_t) 0x7F0060C0UL)
 #define REG_TOUCH_CONFIG        ((uint32_t) 0x7F0061B4UL)
-#define REG_TOUCH_MODE          ((uint32_t) 0x7F006158UL)
+/*#define REG_TOUCH_MODE          ((uint32_t) 0x7F006158UL)*/ /* removed with BRT_AN_086_BT82X-Series-Programming-Guide 1.1*/
 #define REG_TOUCH_RAW_XY        ((uint32_t) 0x7F006164UL)
 #define REG_TOUCH_SCREEN_XY     ((uint32_t) 0x7F006160UL)
 #define REG_TOUCH_TAG           ((uint32_t) 0x7F006178UL)

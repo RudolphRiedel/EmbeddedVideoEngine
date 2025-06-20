@@ -2,7 +2,7 @@
 @file    EVE_commands.c
 @brief   contains FT8xx / BT8xx functions
 @version 6.0
-@date    2025-04-21
+@date    2025-06-20
 @author  Rudolph Riedel
 
 @section info
@@ -40,6 +40,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 6.0
 - added EVE5 / BT82x
 - fixed EVE_cmd_textdim() to use char * instead of uint8_t *
+- updates to follow the new BRT_AN_086_BT82X-Series-Programming-Guide 1.1
+- added EVE_SOFT_RESET option to EVE_init() for BT82x
 
 
 */
@@ -2094,18 +2096,35 @@ void configure_lvds(void)
     EVE_memWrite32(REG_RE_ACTIVE, 0UL);
     EVE_memWrite32(REG_LVDSTX_EN, 0UL);
 
-    EVE_memWrite32(REG_SC1_RESET, 1UL);
+    /* place the swapchain-buffers at the end of the memory */
+    /* 1920 x 1200 as assumed maximum resolution */
+    /* 2304000 pixel with 24 bits per pixel in RGB8 = 6912000 bytes, 6750kiB, 6.59MiB */
+    /* using 8MiB per buffer should be generous*/
+    /* top is 125.5MiB (1Gib DDR3L)*/
+    /* -> top buffer at 117 MiB */
+
+    /* Swap Chain 0 : Render Engine */
+    EVE_memWrite32(REG_SC0_RESET, 1UL);
     EVE_memWrite32(REG_SC0_SIZE, 2UL);
-    EVE_memWrite32(REG_SC0_PTR0, 120UL << 20UL);
-    EVE_memWrite32(REG_SC0_PTR1, 112UL << 20UL);
+    EVE_memWrite32(REG_SC0_PTR0, 117UL << 20UL); /* place buffer at address of 117MiB */
+    EVE_memWrite32(REG_SC0_PTR1, 109UL << 20UL);
 
+    /* the JPEG Engine outputs upto 32 bits per pixel in ARGB8 mode */
+    /* 1920 x 1200 x 4 = 9216000 = 9000kiB = 8.8MiB -> use 9MiB*/
+
+    /* Swap Chain 1 : JPEG Engine */
+    EVE_memWrite32(REG_SC1_RESET, 1UL);
     EVE_memWrite32(REG_SC1_SIZE, 2);
-    EVE_memWrite32(REG_SC1_PTR0, 104UL << 20UL);
-    EVE_memWrite32(REG_SC1_PTR1, 96UL << 20UL);
+    EVE_memWrite32(REG_SC1_PTR0, 100UL << 20UL);
+    EVE_memWrite32(REG_SC1_PTR1, 91UL << 20UL);
 
+    /* Swap Chain 2 : LVDS EX */
+    EVE_memWrite32(REG_SC2_RESET, 1UL);
     EVE_memWrite32(REG_SC2_SIZE, 2);
-    EVE_memWrite32(REG_SC2_PTR0, 88UL << 20UL);
-    EVE_memWrite32(REG_SC2_PTR1, 80UL << 20UL);
+    EVE_memWrite32(REG_SC2_PTR0, 83UL << 20UL);
+    EVE_memWrite32(REG_SC2_PTR1, 75UL << 20UL); /* place buffer at address of 75MiB */
+
+    /* yes, this configuration "wastes" several MiBs, but it leaves 75MiB to work with */
 
     EVE_memWrite32(REG_SO_SOURCE, EVE_SWAPCHAIN_0);
     EVE_memWrite32(REG_SO_FORMAT, EVE_RGB8);
@@ -2119,11 +2138,10 @@ void configure_lvds(void)
     EVE_memWrite32(REG_RE_ACTIVE, 1UL);
 
     EVE_memWrite32(REG_LVDSTX_CTRL_CH0, 2); /* VESA/Format 2 Mapping for 24-bit, Single Pixel per Clock */
-    EVE_memRead32(REG_LVDSTX_PLLCFG);
-    //EVE_memWrite32(REG_LVDSTX_PLLCFG, setlvdspll_value(0, PLL_LOCK_PERIOD, 1u, 7u, 5u)); /* 38.4 MHz * 8 / 6 = 51,2MHz */
-    //EVE_memWrite32(REG_LVDSTX_PLLCFG, 0x00300885); /* 38.4 MHz * 8 / 6 = 51,2MHz */
-    EVE_memWrite32(REG_LVDSTX_PLLCFG, 0x00300000 + 0x00000874); /* 38.4MHz * 7 / 5 = 51.42 MHz */
-    //EVE_memWrite32(REG_LVDSTX_PLLCFG, 0x00300000 + 0x00000885); /* 38.4MHz * 7 / 5 = 51.42 MHz */
+
+    /* target: 51.2MHz LVDSTX clock for 1024x600 panel*/
+    //EVE_memRead32(REG_LVDSTX_PLLCFG);
+    EVE_memWrite32(REG_LVDSTX_PLLCFG, setlvdspll_value(PLL_LOCK_PERIOD, 1u, 5u)); /* scanclk_2x -> 576MHz / 6 = 96MHz -> LVDSTX = 48MHz */
 
     EVE_memWrite32(REG_LVDSTX_EN, LVDS_CH0_EN);
     DELAY_MS(10);
@@ -2210,27 +2228,31 @@ void EVE_write_display_parameters(void)
  * @note - needs a set of calibration values for the selected rotation since this rotates before calibration!
  * @note - EVE_BACKLIGHT_FREQ - configure the backlight frequency, default is not writing it which results in 250Hz.
  * @note - EVE_BACKLIGHT_PWM - configure the backlight pwm, defaults to 0x20 / 25%.
- * @note - (EVE_SOFT_RESET - if defined the host command RST_PULSE is send) - not on EVE5
+ * @note - EVE_SOFT_RESET - if defined the host command RST_PULSE is send
  */
 uint8_t EVE_init(void)
 {
     uint8_t ret;
 
+    /* note: using the RST_N pin is recommended by Bridgetek! */
     EVE_pdn_set();
     DELAY_MS(6U); /* minimum time for reset-down is 214us and the voltage rails need to be stable for 5ms */
     EVE_pdn_clear();
     DELAY_MS(2U); /* BT820 does not specifiy a minimum time to pass after raising RST_N */
 
+#if defined (EVE_SOFT_RESET)
+    EVE_cmdWrite(EVE_RESET_PULSE,0U); /* reset, only required for warm-start if RST_N line is not used */
+#endif
+
     EVE_cmdWrite(EVE_BOOTCFGEN, (BOOTCFGEN_BOOT_USER_SETTING | BOOTCFGEN_DDRTYPE_USER_SETTING | BOOTCFGEN_ALLOW)); /* turn on user setting switch */
-    EVE_cmdWrite(EVE_SETBOOTCFG, (SETBOOTCFG_DDR_EN|SETBOOTCFG_TOUCH_EN));
+    EVE_cmdWrite(EVE_SETBOOTCFG, (SETBOOTCFG_DDR_EN | SETBOOTCFG_TOUCH_EN));
     //EVE_cmdWrite(EVE_SETBOOTCFG, (SETBOOTCFG_DDR_EN|SETBOOTCFG_TOUCH_EN|SETBOOTCFG_AUDIO_EN));
     EVE_cmdWrite(EVE_SETDDRTYPE, setddrtype_value(SETDDRTYPE_SPEED_1333, SETDDRTYPE_TYPE_DDR3L, SETDDRTYPE_SIZE_1024));
     EVE_cmdWrite(EVE_BOOTCFGEN, (BOOTCFGEN_BOOT_USER_SETTING | BOOTCFGEN_DDRTYPE_USER_SETTING)); /* turn off user setting switch */
-
     EVE_cmdWrite(EVE_SETPLLSP1, 15U); /* set SYSPLL_NS to the default value of 15 */
     EVE_cmdWrite(EVE_SETSYSCLKDIV, 0x17U); /* set SYSCLK_DIV to the default value of 7 for a the system clock of 72MHz. */
-
     EVE_cmdWrite(EVE_ACTIVE, 0U); /* start EVE */
+
     DELAY_MS(50U); /* give EVE a moment of silence to power up, a BT820 answers about 34ms after ACTIVE and booting takes about 27ms */
 
     ret = wait_boot();
