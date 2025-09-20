@@ -750,7 +750,51 @@ void EVE_cmd_videostart(const uint32_t options)
 /* the following commands require a patch loaded with CMD_LOADPATCH */
 
 /**
- * @brief Write a bitmap screenshot to the SD card file system..
+ * @brief Write to an existing file on the SD card file system.
+ * @note - Meant to be called outside display-list building.
+ * @note - Includes executing the command and waiting for completion.
+ * @note - Does not support burst-mode.
+ */
+uint32_t EVE_cmd_fswrite(const uint32_t addr, const char * const p_name)
+{
+    uint16_t cmdoffset;
+
+    eve_begin_cmd(CMD_FSWRITE);
+    spi_transmit_32(addr);
+    private_string_write(p_name);
+    spi_transmit_32(0UL);
+    EVE_cs_clear();
+    EVE_execute_cmd();
+    cmdoffset = EVE_memRead32(REG_CMD_WRITE);
+    cmdoffset -= 4U;
+    cmdoffset &= FIFO_BIT_MASK;
+    return (EVE_memRead32(EVE_RAM_CMD + cmdoffset));
+}
+
+/**
+ * @brief Add or resize files on the SD card file system.
+ * @note - Meant to be called outside display-list building.
+ * @note - Includes executing the command and waiting for completion.
+ * @note - Does not support burst-mode.
+ */
+uint32_t EVE_cmd_fsfile(const uint32_t size, const char * const p_name)
+{
+    uint16_t cmdoffset;
+
+    eve_begin_cmd(CMD_FSFILE);
+    spi_transmit_32(size);
+    private_string_write(p_name);
+    spi_transmit_32(0UL);
+    EVE_cs_clear();
+    EVE_execute_cmd();
+    cmdoffset = EVE_memRead32(REG_CMD_WRITE);
+    cmdoffset -= 4U;
+    cmdoffset &= FIFO_BIT_MASK;
+    return (EVE_memRead32(EVE_RAM_CMD + cmdoffset));
+}
+
+/**
+ * @brief Write a bitmap screenshot to the SD card file system.
  * @note - Meant to be called outside display-list building.
  * @note - Includes executing the command and waiting for completion.
  * @note - Does not support burst-mode.
@@ -770,6 +814,32 @@ uint32_t EVE_cmd_fssnapshot(const uint32_t addr, const char * const p_name)
     cmdoffset &= FIFO_BIT_MASK;
     return (EVE_memRead32(EVE_RAM_CMD + cmdoffset));
 }
+
+/**
+ * @brief Write a portion of the screen to the SD card file system.
+ * @note - Meant to be called outside display-list building.
+ * @note - Includes executing the command and waiting for completion.
+ * @note - Does not support burst-mode.
+ */
+uint32_t EVE_cmd_fscropshot(const uint32_t addr, const char * const p_name, int16_t xco, int16_t yco, uint16_t wid, uint16_t hgt)
+{
+    uint16_t cmdoffset;
+
+    eve_begin_cmd(CMD_FSCROPSHOT);
+    spi_transmit_32(addr);
+    private_string_write(p_name);
+    spi_transmit_32(i16_i16_to_u32(xco, yco));
+    spi_transmit_32(u16_u16_to_u32(wid, hgt));
+    spi_transmit_32(0UL);
+    EVE_cs_clear();
+    EVE_execute_cmd();
+    cmdoffset = EVE_memRead32(REG_CMD_WRITE);
+    cmdoffset -= 4U;
+    cmdoffset &= FIFO_BIT_MASK;
+    return (EVE_memRead32(EVE_RAM_CMD + cmdoffset));
+}
+
+
 
 
 /* ##################################################################
@@ -1456,7 +1526,173 @@ void EVE_cmd_watchdog_burst(const uint32_t init_val)
 /* the following commands require a patch loaded with CMD_LOADPATCH */
 
 /**
- * @brief Draws an LED-style seven segment LED which can display decimal numbers from 0 to 9.
+ * @brief Start a Region section.
+ */
+void EVE_cmd_region(void)
+{
+    if (0U == g_cmd_burst)
+    {
+        eve_begin_cmd(CMD_REGION);
+        EVE_cs_clear();
+    }
+    else
+    {
+        spi_transmit_burst(CMD_REGION);
+    }
+}
+
+/**
+ * @brief Start a Region section, only works in burst-mode.
+ */
+void EVE_cmd_region_burst(void)
+{
+    spi_transmit_burst(CMD_REGION);
+}
+
+/**
+ * @brief Stop a Region section.
+ */
+void EVE_cmd_endregion(int16_t xco, int16_t yco, uint16_t wid, uint16_t hgt)
+{
+    if (0U == g_cmd_burst)
+    {
+        eve_begin_cmd(CMD_ENDREGION);
+        spi_transmit_32(i16_i16_to_u32(xco, yco));
+        spi_transmit_32(u16_u16_to_u32(wid, hgt));
+        EVE_cs_clear();
+    }
+    else
+    {
+        spi_transmit_burst(CMD_ENDREGION);
+        spi_transmit_burst(i16_i16_to_u32(xco, yco));
+        spi_transmit_burst(u16_u16_to_u32(wid, hgt));
+    }
+}
+
+/**
+ * @brief Stop a Region section, only works in burst-mode.
+ */
+void EVE_cmd_endregion_burst(int16_t xco, int16_t yco, uint16_t wid, uint16_t hgt)
+{
+    spi_transmit_burst(CMD_ENDREGION);
+    spi_transmit_burst(i16_i16_to_u32(xco, yco));
+    spi_transmit_burst(u16_u16_to_u32(wid, hgt));
+}
+
+/**
+ * @brief Draw scaled text.
+ */
+void EVE_cmd_textscale(int16_t xco, int16_t yco, uint16_t font, uint16_t options, uint32_t scale, const char * const p_text)
+{
+    if (0U == g_cmd_burst)
+    {
+        eve_begin_cmd(CMD_TEXTSCALE);
+        spi_transmit_32(i16_i16_to_u32(xco, yco));
+        spi_transmit_32(u16_u16_to_u32(font, options));
+        spi_transmit_32(scale);
+        private_string_write(p_text);
+        EVE_cs_clear();
+    }
+    else
+    {
+        spi_transmit_burst(CMD_TEXTSCALE);
+        spi_transmit_burst(i16_i16_to_u32(xco, yco));
+        spi_transmit_burst(u16_u16_to_u32(font, options));
+        spi_transmit_burst(scale);
+        private_string_write(p_text);
+    }
+}
+
+/**
+ * @brief SDraw scaled text, only works in burst-mode.
+ */
+void EVE_cmd_textscale_burst(int16_t xco, int16_t yco, uint16_t font, uint16_t options, uint32_t scale, const char * const p_text)
+{
+    spi_transmit_burst(CMD_TEXTSCALE);
+    spi_transmit_burst(i16_i16_to_u32(xco, yco));
+    spi_transmit_burst(u16_u16_to_u32(font, options));
+    spi_transmit_burst(scale);
+    private_string_write(p_text);
+}
+
+/**
+ * @brief Draw text at an angle.
+ */
+void EVE_cmd_textangle(int16_t xco, int16_t yco, uint16_t font, uint16_t options, uint32_t angle, const char * const p_text)
+{
+if (0U == g_cmd_burst)
+    {
+        eve_begin_cmd(CMD_TEXTANGLE);
+        spi_transmit_32(i16_i16_to_u32(xco, yco));
+        spi_transmit_32(u16_u16_to_u32(font, options));
+        spi_transmit_32(angle);
+        private_string_write(p_text);
+        EVE_cs_clear();
+    }
+    else
+    {
+        spi_transmit_burst(CMD_TEXTANGLE);
+        spi_transmit_burst(i16_i16_to_u32(xco, yco));
+        spi_transmit_burst(u16_u16_to_u32(font, options));
+        spi_transmit_burst(angle);
+        private_string_write(p_text);
+    }
+}
+
+/**
+ * @brief Draw text at an angle, only works in burst-mode.
+ */
+void EVE_cmd_textangle_burst(int16_t xco, int16_t yco, uint16_t font, uint16_t options, uint32_t angle, const char * const p_text)
+{
+    spi_transmit_burst(CMD_TEXTANGLE);
+    spi_transmit_burst(i16_i16_to_u32(xco, yco));
+    spi_transmit_burst(u16_u16_to_u32(font, options));
+    spi_transmit_burst(angle);
+    private_string_write(p_text);
+}
+
+/**
+ * @brief Draw text within a box and scroll the text smoothly.
+ */
+void EVE_cmd_textticker(int16_t xco, int16_t yco, uint16_t wid, uint16_t hgt, uint16_t font, uint16_t options, uint32_t offset, const char * const p_text)
+{
+    if (0U == g_cmd_burst)
+    {
+        eve_begin_cmd(CMD_TEXTTICKER);
+        spi_transmit_32(i16_i16_to_u32(xco, yco));
+        spi_transmit_32(u16_u16_to_u32(wid, hgt));
+        spi_transmit_32(u16_u16_to_u32(font, options));
+        spi_transmit_32(offset);
+        private_string_write(p_text);
+        EVE_cs_clear();
+    }
+    else
+    {
+        spi_transmit_burst(CMD_TEXTTICKER);
+        spi_transmit_burst(i16_i16_to_u32(xco, yco));
+        spi_transmit_burst(u16_u16_to_u32(wid, hgt));
+        spi_transmit_burst(u16_u16_to_u32(font, options));
+        spi_transmit_burst(offset);
+        private_string_write(p_text);
+    }
+}
+
+/**
+ * @brief Draw text within a box and scroll the text smoothly, only works in burst-mode.
+ */
+void EVE_cmd_textticker_burst(int16_t xco, int16_t yco, uint16_t wid, uint16_t hgt, uint16_t font, uint16_t options, uint32_t offset, const char * const p_text)
+{
+    spi_transmit_burst(CMD_TEXTTICKER);
+    spi_transmit_burst(i16_i16_to_u32(xco, yco));
+    spi_transmit_burst(u16_u16_to_u32(wid, hgt));
+    spi_transmit_burst(u16_u16_to_u32(font, options));
+    spi_transmit_burst(offset);
+    private_string_write(p_text);
+}
+
+
+/**
+ * @brief Draw a seven segment display for decimal numbers from 0 to 9.
  */
 void EVE_cmd_sevenseg(const int16_t xc0, const int16_t yc0, const uint16_t size, const uint16_t number)
 {
@@ -1476,7 +1712,7 @@ void EVE_cmd_sevenseg(const int16_t xc0, const int16_t yc0, const uint16_t size,
 }
 
 /**
- * @brief Draws an LED-style seven segment LED which can display decimal numbers from 0 to 9, only works in burst-mode.
+ * @brief Draw a seven segment display for decimal numbers from 0 to 9, only works in burst-mode.
  */
 void EVE_cmd_sevenseg_burst(const int16_t xc0, const int16_t yc0, const uint16_t size, const uint16_t number)
 {
@@ -1484,5 +1720,109 @@ void EVE_cmd_sevenseg_burst(const int16_t xc0, const int16_t yc0, const uint16_t
     spi_transmit_burst(i16_i16_to_u32(xc0, yc0));
     spi_transmit_burst(u16_u16_to_u32(size, number));
 }
+
+/**
+ * @brief Display a multiline message box.
+ */
+void EVE_cmd_messagebox(const uint16_t font, const uint16_t options, const char * const p_text)
+{
+    if (0U == g_cmd_burst)
+    {
+        eve_begin_cmd(CMD_MESSAGEBOX);
+        spi_transmit_32(u16_u16_to_u32(font, options));
+        private_string_write(p_text);
+        EVE_cs_clear();
+    }
+    else
+    {
+        spi_transmit_burst(CMD_MESSAGEBOX);
+        spi_transmit_burst(u16_u16_to_u32(font, options));
+        private_string_write(p_text);
+    }
+}
+
+/**
+ * @brief Display a multiline message box, only works in burst-mode.
+ */
+void EVE_cmd_messagebox_burst(const uint16_t font, const uint16_t options, const char * const p_text)
+{
+    spi_transmit_burst(CMD_MESSAGEBOX);
+    spi_transmit_burst(u16_u16_to_u32(font, options));
+    private_string_write(p_text);
+}
+
+/**
+ * @brief Display a multiline tooltip box.
+ */
+void EVE_cmd_tooltip(int16_t xco, int16_t yco, uint16_t font, uint16_t options, const char * const p_text)
+{
+    if (0U == g_cmd_burst)
+    {
+        eve_begin_cmd(CMD_TOOLTIP);
+        spi_transmit_32(i16_i16_to_u32(xco, yco));
+        spi_transmit_32(u16_u16_to_u32(font, options));
+        private_string_write(p_text);
+        EVE_cs_clear();
+    }
+    else
+    {
+        spi_transmit_burst(CMD_TOOLTIP);
+        spi_transmit_burst(i16_i16_to_u32(xco, yco));
+        spi_transmit_burst(u16_u16_to_u32(font, options));
+        private_string_write(p_text);
+    }
+}
+
+/**
+ * @brief Display a multiline tooltip box, only works in burst-mode.
+ */
+void EVE_cmd_tooltip_burst(int16_t xco, int16_t yco, uint16_t font, uint16_t options, const char * const p_text)
+{
+    spi_transmit_burst(CMD_TOOLTIP);
+    spi_transmit_burst(i16_i16_to_u32(xco, yco));
+    spi_transmit_burst(u16_u16_to_u32(font, options));
+    private_string_write(p_text);
+}
+
+/**
+ * @brief Draw a keyboard or keypad.
+ */
+void EVE_cmd_keyboard(int16_t xco, int16_t yco, uint16_t wid, uint16_t hgt, uint16_t font, uint16_t options, const char * const p_text)
+{
+    if (0U == g_cmd_burst)
+    {
+        eve_begin_cmd(CMD_KEYBOARD);
+        spi_transmit_32(i16_i16_to_u32(xco, yco));
+        spi_transmit_32(u16_u16_to_u32(wid, hgt));
+        spi_transmit_32(u16_u16_to_u32(font, options));
+        private_string_write(p_text);
+        EVE_cs_clear();
+    }
+    else
+    {
+        spi_transmit_burst(CMD_KEYBOARD);
+        spi_transmit_burst(i16_i16_to_u32(xco, yco));
+        spi_transmit_burst(u16_u16_to_u32(wid, hgt));
+        spi_transmit_burst(u16_u16_to_u32(font, options));
+        private_string_write(p_text);
+    }
+}
+
+/**
+ * @brief Draw a keyboard or keypad, only works in burst-mode.
+ */
+void EVE_cmd_keyboard_burst(int16_t xco, int16_t yco, uint16_t wid, uint16_t hgt, uint16_t font, uint16_t options, const char * const p_text)
+{
+    spi_transmit_burst(CMD_KEYBOARD);
+    spi_transmit_burst(i16_i16_to_u32(xco, yco));
+    spi_transmit_burst(u16_u16_to_u32(wid, hgt));
+    spi_transmit_burst(u16_u16_to_u32(font, options));
+    private_string_write(p_text);
+}
+
+
+
+
+
 
 #endif

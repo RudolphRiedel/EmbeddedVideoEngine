@@ -71,7 +71,11 @@ void EVE_cmd_textdim(const uint32_t ptr, const uint16_t font, const uint16_t opt
 void EVE_cmd_videostart(const uint32_t options);
 
 /* the following commands require a patch loaded with CMD_LOADPATCH */
+uint32_t EVE_cmd_fswrite(const uint32_t addr, const char * const p_name);
+uint32_t EVE_cmd_fsfile(const uint32_t size, const char * const p_name);
 uint32_t EVE_cmd_fssnapshot(const uint32_t addr, const char * const p_name);
+uint32_t EVE_cmd_fscropshot(const uint32_t addr, const char * const p_name, int16_t xco, int16_t yco, uint16_t wid, uint16_t hgt);
+
 
 /* ##################################################################
     command co-processor functions for display lists
@@ -109,8 +113,25 @@ void EVE_cmd_watchdog(const uint32_t init_val);
 void EVE_cmd_watchdog_burst(const uint32_t init_val);
 
 /* the following commands require a patch loaded with CMD_LOADPATCH */
+void EVE_cmd_region(void);
+void EVE_cmd_region_burst(void);
+void EVE_cmd_endregion(int16_t xco, int16_t yco, uint16_t wid, uint16_t hgt);
+void EVE_cmd_endregion_burst(int16_t xco, int16_t yco, uint16_t wid, uint16_t hgt);
+void EVE_cmd_textscale(int16_t xco, int16_t yco, uint16_t font, uint16_t options, uint32_t scale, const char * const p_text);
+void EVE_cmd_textscale_burst(int16_t xco, int16_t yco, uint16_t font, uint16_t options, uint32_t scale, const char * const p_text);
+void EVE_cmd_textangle(int16_t xco, int16_t yco, uint16_t font, uint16_t options, uint32_t angle, const char * const p_text);
+void EVE_cmd_textangle_burst(int16_t xco, int16_t yco, uint16_t font, uint16_t options, uint32_t angle, const char * const p_text);
+void EVE_cmd_textticker(int16_t xco, int16_t yco, uint16_t wid, uint16_t hgt, uint16_t font, uint16_t options, uint32_t offset, const char * const p_text);
+void EVE_cmd_textticker_burst(int16_t xco, int16_t yco, uint16_t wid, uint16_t hgt, uint16_t font, uint16_t options, uint32_t offset, const char * const p_text);
 void EVE_cmd_sevenseg(const int16_t xc0, const int16_t yc0, const uint16_t size, const uint16_t number);
 void EVE_cmd_sevenseg_burst(const int16_t xc0, const int16_t yc0, const uint16_t size, const uint16_t number);
+void EVE_cmd_messagebox(const uint16_t font, const uint16_t options, const char * const p_text);
+void EVE_cmd_messagebox_burst(const uint16_t font, const uint16_t options, const char * const p_text);
+void EVE_cmd_tooltip(int16_t xco, int16_t yco, uint16_t font, uint16_t options, const char * const p_text);
+void EVE_cmd_tooltip_burst(int16_t xco, int16_t yco, uint16_t font, uint16_t options, const char * const p_text);
+void EVE_cmd_keyboard(int16_t xco, int16_t yco, uint16_t wid, uint16_t hgt, uint16_t font, uint16_t options, const char * const p_text);
+void EVE_cmd_keyboard_burst(int16_t xco, int16_t yco, uint16_t wid, uint16_t hgt, uint16_t font, uint16_t options, const char * const p_text);
+
 
 #endif
 
