@@ -2,7 +2,7 @@
 @file    EVE_target_STM32.h
 @brief   target specific includes, definitions and functions
 @version 6.0
-@date    2025-06-20
+@date    2025-09-13
 @author  Rudolph Riedel
 
 @section LICENSE
@@ -34,6 +34,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 - modified for BT820
 
 
+
+
+
+
+
+- Bugfix: STM32F103 does not use gpio_init.Alternate for HAL_GPIO_Init()
 */
 
 #ifndef EVE_TARGET_STM32_H
@@ -129,7 +135,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 #if !defined (EVE_SPI_GPIO_ALT_FUNCTION)
+#if !defined (STM32F1) /* we need this on all families except STM32F1 */
 #error "EVE_SPI_GPIO_ALT_FUNCTION must be defined in order to configure the SPI GPIO pins (e.g. -DEVE_SPI_GPIO_ALT_FUNCTION=GPIO_AF5_SPI4)"
+#endif
 #endif
 
 /* you may define these in your build-environment to use different settings */

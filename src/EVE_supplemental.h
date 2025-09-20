@@ -2,7 +2,7 @@
 @file    EVE_supplemental.h
 @brief   prototypes for supplemental functions
 @version 6.0
-@date    2024-04-19
+@date    2024-09-20
 @author  Rudolph Riedel
 
 @section LICENSE
@@ -39,7 +39,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define EVE_SUPPLEMENTAL_H
 
 #include "EVE.h"
-#include "EVE_commands.h"
 
 #ifdef __cplusplus
 extern "C"

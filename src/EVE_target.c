@@ -2,7 +2,7 @@
 @file    EVE_target.c
 @brief   target specific functions for plain C targets
 @version 6.0
-@date    2025-04-21
+@date    2025-09-20
 @author  Rudolph Riedel
 
 @section LICENSE
@@ -305,7 +305,9 @@ void EVE_init_spi(void)
     gpio_init.Mode = GPIO_MODE_AF_PP;
     gpio_init.Pull = GPIO_NOPULL;
     gpio_init.Speed = GPIO_SPEED_FREQ_HIGH;
+#if !defined (STM32F1) /* we need this on all families except STM32F1 */
     gpio_init.Alternate = EVE_SPI_GPIO_ALT_FUNCTION;
+#endif
     HAL_GPIO_Init(EVE_SPI_PORT, &gpio_init);
 
     eve_spi_handle.Instance = EVE_SPI;
