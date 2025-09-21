@@ -45,6 +45,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 - added EVE_cmd_loadpatch()
 - moved DL functions to EVE_dl_commands.c / .h
 - moved BT82x functions to EVE_commands_BT82x.c / .h
+- added EVE_execute_cmd_and_get_result() to replace duplicate code sequences
 
 */
 
@@ -345,6 +346,22 @@ void EVE_execute_cmd(void)
     }
 }
 
+/**
+ * @brief Helper function for all the functions that return a signle 32 bit result from the coprocessor.
+ */
+uint32_t EVE_execute_cmd_and_get_result(void)
+{
+    uint16_t cmdoffset;
+
+    spi_transmit_32(0UL);
+    EVE_cs_clear();
+    EVE_execute_cmd();
+    cmdoffset = EVE_memRead16(REG_CMD_WRITE);
+    cmdoffset -= 4U;
+    cmdoffset &= FIFO_BIT_MASK;
+    return (EVE_memRead32(EVE_RAM_CMD + cmdoffset));
+}
+
 /* begin a coprocessor command, this is used for non-display-list and non-burst-mode commands.*/
 void eve_begin_cmd(const uint32_t command)
 {
@@ -635,7 +652,7 @@ void EVE_cmd_fontcachequery(uint32_t * const p_total, uint32_t * const p_used)
     EVE_cs_clear();
     EVE_execute_cmd();
 
-    cmdoffset = EVE_memRead16(REG_CMD_WRITE); /* read the coprocessor write pointer */
+    cmdoffset = EVE_memRead16(REG_CMD_WRITE);
 
     if (p_total != NULL)
     {
@@ -657,18 +674,10 @@ void EVE_cmd_fontcachequery(uint32_t * const p_total, uint32_t * const p_used)
  */
 uint32_t EVE_cmd_pclkfreq(const uint32_t ftarget, const int32_t rounding)
 {
-    uint16_t cmdoffset;
-
     eve_begin_cmd(CMD_PCLKFREQ);
     spi_transmit_32(ftarget);
     spi_transmit_32(i32_to_u32(rounding));
-    spi_transmit_32(0UL);
-    EVE_cs_clear();
-    EVE_execute_cmd();
-    cmdoffset = EVE_memRead16(REG_CMD_WRITE); /* read the coprocessor write pointer */
-    cmdoffset -= 4U;
-    cmdoffset &= FIFO_BIT_MASK;
-    return (EVE_memRead32(EVE_RAM_CMD + cmdoffset));
+    return EVE_execute_cmd_and_get_result();
 }
 #endif /* EVE_GEN < 5 */
 
@@ -726,16 +735,8 @@ void EVE_cmd_flasherase(void)
  */
 uint32_t EVE_cmd_flashfast(void)
 {
-    uint16_t cmdoffset;
-
     eve_begin_cmd(CMD_FLASHFAST);
-    spi_transmit_32(0UL);
-    EVE_cs_clear();
-    EVE_execute_cmd();
-    cmdoffset = EVE_memRead16(REG_CMD_WRITE); /* read the coprocessor write pointer */
-    cmdoffset -= 4U;
-    cmdoffset &= FIFO_BIT_MASK;
-    return (EVE_memRead32(EVE_RAM_CMD + cmdoffset));
+    return EVE_execute_cmd_and_get_result();
 }
 
 /**
@@ -964,7 +965,7 @@ void EVE_cmd_getprops(uint32_t * const p_pointer, uint32_t * const p_width, uint
     spi_transmit_32(0UL);
     EVE_cs_clear();
     EVE_execute_cmd();
-    cmdoffset = EVE_memRead16(REG_CMD_WRITE); /* read the coprocessor write pointer */
+    cmdoffset = EVE_memRead16(REG_CMD_WRITE);
 
     if (p_pointer != NULL)
     {
@@ -988,16 +989,8 @@ void EVE_cmd_getprops(uint32_t * const p_pointer, uint32_t * const p_width, uint
  */
 uint32_t EVE_cmd_getptr(void)
 {
-    uint16_t cmdoffset;
-
     eve_begin_cmd(CMD_GETPTR);
-    spi_transmit_32(0UL);
-    EVE_cs_clear();
-    EVE_execute_cmd();
-    cmdoffset = EVE_memRead16(REG_CMD_WRITE); /* read the coprocessor write pointer */
-    cmdoffset -= 4U;
-    cmdoffset &= FIFO_BIT_MASK;
-    return (EVE_memRead32(EVE_RAM_CMD + cmdoffset));
+    return EVE_execute_cmd_and_get_result();
 }
 
 /**
@@ -1118,18 +1111,10 @@ void EVE_cmd_memcpy_burst(const uint32_t dest, const uint32_t src, const uint32_
  */
 uint32_t EVE_cmd_memcrc(const uint32_t ptr, const uint32_t num)
 {
-    uint16_t cmdoffset;
-
     eve_begin_cmd(CMD_MEMCRC);
     spi_transmit_32(ptr);
     spi_transmit_32(num);
-    spi_transmit_32(0UL);
-    EVE_cs_clear();
-    EVE_execute_cmd();
-    cmdoffset = EVE_memRead16(REG_CMD_WRITE); /* read the coprocessor write pointer */
-    cmdoffset -= 4U;
-    cmdoffset &= FIFO_BIT_MASK;
-    return (EVE_memRead32(EVE_RAM_CMD + cmdoffset));
+    return EVE_execute_cmd_and_get_result();
 }
 
 /**
@@ -1230,17 +1215,9 @@ void EVE_cmd_playvideo(const uint32_t options, const uint8_t * const p_data, con
 #if 0
 uint32_t EVE_cmd_regread(uint32_t ptr)
 {
-    uint16_t cmdoffset;
-
     eve_begin_cmd(CMD_REGREAD);
     spi_transmit_32(ptr);
-    spi_transmit_32(0UL);
-    EVE_cs_clear();
-    EVE_execute_cmd();
-    cmdoffset = EVE_memRead16(REG_CMD_WRITE); /* read the coprocessor write pointer */
-    cmdoffset -= 4U;
-    cmdoffset &= FIFO_BIT_MASK;
-    return (EVE_memRead32(EVE_RAM_CMD + cmdoffset));
+    return EVE_execute_cmd_and_get_result();
 }
 #endif
 

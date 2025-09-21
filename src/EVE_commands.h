@@ -2,7 +2,7 @@
 @file    EVE_commands.h
 @brief   contains FT8xx / BT8xx function prototypes
 @version 6.0
-@date    2025-09-20
+@date    2025-09-21
 @author  Rudolph Riedel
 
 @section LICENSE
@@ -36,6 +36,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 - added EVE_cmd_loadpatch()
 - moved DL functions to EVE_dl_commands.c / .h
 - moved BT82x functions to EVE_commands_BT82x.c / .h
+- added EVE_execute_cmd_and_get_result() to replace duplicate code sequences
 
 */
 
@@ -114,6 +115,7 @@ void block_transfer(const uint8_t * const p_data, const uint32_t len); /* export
 uint8_t EVE_busy(void);
 uint8_t EVE_get_and_reset_fault_state(void);
 void EVE_execute_cmd(void);
+uint32_t EVE_execute_cmd_and_get_result(void);
 
 /* ##################################################################
     commands and functions to be used outside of display-lists
