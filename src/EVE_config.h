@@ -2,14 +2,14 @@
 @file    EVE_config.h
 @brief   configuration information for some TFTs
 @version 6.0
-@date    2025-04-19
+@date    2026-01-18
 @author  Rudolph Riedel
 
 @section LICENSE
 
 MIT License
 
-Copyright (c) 2016-2025 Rudolph Riedel
+Copyright (c) 2016-2026 Rudolph Riedel
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -32,7 +32,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 6.0
 - changed all parameters that are written to registers to UL with a cast to uint32_t
-
+- added VM820C_1280800 for BT820 1280x800 displays
 
 */
 
@@ -1469,6 +1469,24 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define EVE_GEN 5
 #endif
 
+/* EVE5_TEST, BT820 */
+#if defined (VM820C_1280800)
+#define EVE_HSIZE ((uint32_t) 1280UL)
+#define EVE_VSIZE ((uint32_t) 800UL)
+
+#define EVE_VSYNC0 ((uint32_t) 0UL)
+#define EVE_VSYNC1 ((uint32_t) 15UL)
+#define EVE_VOFFSET ((uint32_t) 38UL)
+#define EVE_VCYCLE ((uint32_t) 838UL)
+#define EVE_HSYNC0 ((uint32_t) 0L)
+#define EVE_HSYNC1 ((uint32_t) 72UL)
+#define EVE_HOFFSET ((uint32_t) 160UL)
+#define EVE_HCYCLE ((uint32_t) 1440UL)
+//#define EVE_PCLK_FREQ ((uint32_t) 0x0D12UL) /* value to be put into REG_PCLK_FREQ -> 51MHz, REG_PCLK is set to 1 */
+#define EVE_PCLKPOL ((uint32_t) 1UL)
+#define EVE_CSPREAD ((uint32_t) 0UL)
+#define EVE_GEN 5
+#endif
 
 /* ########## Common Timings ########## */
 
