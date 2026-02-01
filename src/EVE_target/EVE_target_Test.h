@@ -2,14 +2,14 @@
 @file    EVE_target_Test.h
 @brief   target specific includes, definitions and functions
 @version 6.0
-@date    2025-04-20
+@date    2026-02-01
 @author  Rudolph Riedel
 
 @section LICENSE
 
 MIT License
 
-Copyright (c) 2016-2025 Rudolph Riedel
+Copyright (c) 2016-2026 Rudolph Riedel
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -32,6 +32,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 6.0
 - modified for BT820
+- rewritten, moved all the functions to EVE_target.c
 
 */
 
@@ -42,133 +43,44 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <stdint.h>
 
-/* ToDo: checkout Google Test / Mock */
-
-extern uint8_t EVE_spi_test_buffer[8192];
-extern uint8_t EVE_spi_test_buffer_index;
-extern uint8_t EVE_spi_test_buffer_receive[32];
-
-struct
-{
-    uint8_t called;
-} Test_EVE_pdn_set;
-
-struct
-{
-    uint8_t called;
-} Test_EVE_pdn_clear;
-
-struct
-{
-    uint8_t called;
-} Test_EVE_cs_set;
-
-struct
-{
-    uint8_t called;
-} Test_EVE_cs_clear;
-
-struct
-{
-    uint8_t called;
-} Test_EVE_spi_transmit;
-
-struct
-{
-    uint8_t called;
-} Test_EVE_spi_transmit_32;
-
-struct
-{
-    uint8_t called;
-} Test_EVE_spi_transmit_32_addr;
-
 #define EVE_DELAY_1MS 4U  /* no real delay needed for the software tests */
+#define EVE_TEST_BUFFER_SIZE 8192U
 
-static inline void DELAY_MS(uint16_t val)
+extern uint8_t EVE_spi_test_buffer[];
+extern uint16_t EVE_spi_test_buffer_index;
+extern uint8_t EVE_spi_test_buffer_receive[];
+typedef struct
 {
-    for (uint16_t counter = 0; counter < EVE_DELAY_1MS; counter++)
-    {
-        __asm__ volatile("nop");
-    }
-}
-static inline void EVE_pdn_set(void)
-{
-    Test_EVE_pdn_set.called = Test_EVE_pdn_set.called + 1U;
-}
+    uint32_t called;
+} test_call_counter_t;
 
-static inline void EVE_pdn_clear(void)
-{
-    Test_EVE_pdn_clear.called = Test_EVE_pdn_clear.called + 1U;
-}
+extern test_call_counter_t Test_EVE_pdn_set;
+extern test_call_counter_t Test_EVE_pdn_clear;
+extern test_call_counter_t Test_EVE_cs_set;
+extern test_call_counter_t Test_EVE_cs_clear;
+extern test_call_counter_t Test_EVE_spi_transmit;
+extern test_call_counter_t Test_EVE_spi_transmit_32;
+extern test_call_counter_t Test_EVE_spi_transmit_32_addr;
+extern test_call_counter_t Test_EVE_spi_transmit_burst;
+extern test_call_counter_t Test_EVE_spi_receive;
+extern test_call_counter_t Test_EVE_fetch_flash_byte;
 
-static inline void EVE_cs_set(void)
-{
-    Test_EVE_cs_set.called = Test_EVE_cs_set.called + 1U;
-    EVE_spi_test_buffer_index = 0;
-}
+/* mock function declarations */
+void DELAY_MS(uint16_t val);
+void EVE_pdn_set(void);
+void EVE_pdn_clear(void);
+void EVE_cs_set(void);
+void EVE_cs_clear(void);
+void spi_transmit(uint8_t data);
+void spi_transmit_32_addr(uint32_t data);
+void spi_transmit_32(uint32_t data);
+void spi_transmit_burst(uint32_t data);
+uint8_t spi_receive(uint8_t data);
+uint8_t fetch_flash_byte(const uint8_t *p_data);
 
-static inline void EVE_cs_clear(void)
-{
-    Test_EVE_cs_clear.called = Test_EVE_cs_clear.called + 1U;
-}
-
-static inline void spi_transmit(uint8_t data)
-{
-    Test_EVE_spi_transmit.called = Test_EVE_spi_transmit.called + 1U;
-    EVE_spi_test_buffer[EVE_spi_test_buffer_index] = data;
-    EVE_spi_test_buffer_index++;
-}
-
-/* only used for EVE5 */
-static inline void spi_transmit_32_addr(uint32_t data)
-{
-    Test_EVE_spi_transmit_32_addr.called = Test_EVE_spi_transmit_32_addr.called + 1U;
-    EVE_spi_test_buffer[EVE_spi_test_buffer_index] = ((uint8_t)(data >> 24U));
-    EVE_spi_test_buffer_index++;
-    EVE_spi_test_buffer[EVE_spi_test_buffer_index] = ((uint8_t)(data >> 16U));
-    EVE_spi_test_buffer_index++;
-    EVE_spi_test_buffer[EVE_spi_test_buffer_index] = ((uint8_t)(data >> 8U));
-    EVE_spi_test_buffer_index++;
-    EVE_spi_test_buffer[EVE_spi_test_buffer_index] = ((uint8_t)(data & 0x000000ffUL));
-    EVE_spi_test_buffer_index++;
-}
-
-static inline void spi_transmit_32(uint32_t data)
-{
-    Test_EVE_spi_transmit_32.called = Test_EVE_spi_transmit_32.called + 1U;
-    EVE_spi_test_buffer[EVE_spi_test_buffer_index] = ((uint8_t)(data & 0x000000ffUL));
-    EVE_spi_test_buffer_index++;
-    EVE_spi_test_buffer[EVE_spi_test_buffer_index] = ((uint8_t)(data >> 8U));
-    EVE_spi_test_buffer_index++;
-    EVE_spi_test_buffer[EVE_spi_test_buffer_index] = ((uint8_t)(data >> 16U));
-    EVE_spi_test_buffer_index++;
-    EVE_spi_test_buffer[EVE_spi_test_buffer_index] = ((uint8_t)(data >> 24U));
-    EVE_spi_test_buffer_index++;
-}
-
-/* spi_transmit_burst() is only used for cmd-FIFO commands */
-/* so it *always* has to transfer 4 bytes */
-static inline void spi_transmit_burst(uint32_t data)
-{
-    Test_EVE_spi_transmit_burst.called = Test_EVE_spi_transmit_burst.called + 1U;
-    spi_transmit_32(data);
-}
-
-static inline uint8_t spi_receive(uint8_t data)
-{
-    Test_EVE_spi_transmit.called = Test_EVE_spi_receive.called + 1U;
-    uint8_t result = EVE_spi_test_buffer_receive[EVE_spi_test_buffer_index];
-    EVE_spi_test_buffer[EVE_spi_test_buffer_index] = data;
-    EVE_spi_test_buffer_index++;
-}
-
-static inline uint8_t fetch_flash_byte(const uint8_t *p_data)
-{
-    Test_EVE_fetch_flash_byte.called = Test_EVE_fetch_flash_byte.called + 1U;
-    (void) *p_data;
-    return (0x00);
-}
+/* Test helper functions */
+void EVE_test_reset_counters(void);
+void EVE_test_print_report(void);
 
 #endif /* SOFTWARE_TEST */
 

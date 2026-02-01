@@ -2,14 +2,14 @@
 @file    EVE_target.h
 @brief   target specific includes, definitions and functions
 @version 6.0
-@date    2025-05-30
+@date    2026-02-01
 @author  Rudolph Riedel
 
 @section LICENSE
 
 MIT License
 
-Copyright (c) 2016-2025 Rudolph Riedel
+Copyright (c) 2016-2026 Rudolph Riedel
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -33,6 +33,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 6.0
 - modified for 6.0
 - improved to support Arduino Every
+- added SOFTWARE_TEST target
 
 */
 
@@ -270,6 +271,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "EVE_target/EVE_target_Tricore_Tasking.h"
 
 #endif
+#endif
+
+/* ################################################################## */
+/* ################################################################## */
+
+#if defined (SOFTWARE_TEST)
+
+#include "EVE_target/EVE_target_Test.h"
+
 #endif
 
 /* ################################################################## */

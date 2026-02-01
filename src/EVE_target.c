@@ -2,7 +2,7 @@
 @file    EVE_target.c
 @brief   target specific functions for plain C targets
 @version 6.0
-@date    2025-09-20
+@date    2026-02-01
 @author  Rudolph Riedel
 
 @section LICENSE
@@ -33,6 +33,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 6.0
 - modified for BT820
 - fixed DMA transfer for BT820 and ATSAM
+- added functions for a SOFTWARE_TEST target
 
  */
 
@@ -1080,5 +1081,168 @@ void EVE_SPI_Init(void)
 
 #endif /* __MSP432P401R__ */
 #endif /* __TI_ARM__ */
+
+/* ################################################################## */
+/* ################################################################## */
+
+#if defined (SOFTWARE_TEST)
+
+#include <stdio.h>
+#include <string.h>
+
+/* Test buffers */
+uint8_t EVE_spi_test_buffer[EVE_TEST_BUFFER_SIZE] = {0};
+uint16_t EVE_spi_test_buffer_index = 0;
+uint8_t EVE_spi_test_buffer_receive[32] = {0};
+
+/* Test call counters */
+test_call_counter_t Test_EVE_pdn_set = {0};
+test_call_counter_t Test_EVE_pdn_clear = {0};
+test_call_counter_t Test_EVE_cs_set = {0};
+test_call_counter_t Test_EVE_cs_clear = {0};
+test_call_counter_t Test_EVE_spi_transmit = {0};
+test_call_counter_t Test_EVE_spi_transmit_32 = {0};
+test_call_counter_t Test_EVE_spi_transmit_32_addr = {0};
+test_call_counter_t Test_EVE_spi_transmit_burst = {0};
+test_call_counter_t Test_EVE_spi_receive = {0};
+test_call_counter_t Test_EVE_fetch_flash_byte = {0};
+
+/* Function implementations */
+void DELAY_MS(uint16_t val)
+{
+    while (val > 0U)
+    {
+        for (uint16_t counter = 0; counter < EVE_DELAY_1MS; counter++)
+        {
+            __asm__ volatile ("nop");
+        }
+        val--;
+    }
+}
+
+void EVE_pdn_set(void)
+{
+    Test_EVE_pdn_set.called++;
+}
+
+void EVE_pdn_clear(void)
+{
+    Test_EVE_pdn_clear.called++;
+}
+
+void EVE_cs_set(void)
+{
+    Test_EVE_cs_set.called++;
+    EVE_spi_test_buffer_index = 0;
+}
+
+void EVE_cs_clear(void)
+{
+    Test_EVE_cs_clear.called++;
+}
+
+void spi_transmit(uint8_t data)
+{
+    Test_EVE_spi_transmit.called++;
+    if (EVE_spi_test_buffer_index < (EVE_TEST_BUFFER_SIZE - 1u) )
+    {
+        EVE_spi_test_buffer[EVE_spi_test_buffer_index] = data;
+        EVE_spi_test_buffer_index++;
+    }
+}
+
+/* only used for EVE5 */
+void spi_transmit_32_addr(uint32_t data)
+{
+    Test_EVE_spi_transmit_32_addr.called++;
+    if (EVE_spi_test_buffer_index < (EVE_TEST_BUFFER_SIZE - 4u))
+    {
+        EVE_spi_test_buffer[EVE_spi_test_buffer_index++] = (uint8_t)(data >> 24U);
+        EVE_spi_test_buffer[EVE_spi_test_buffer_index++] = (uint8_t)(data >> 16U);
+        EVE_spi_test_buffer[EVE_spi_test_buffer_index++] = (uint8_t)(data >> 8U);
+        EVE_spi_test_buffer[EVE_spi_test_buffer_index++] = (uint8_t)(data & 0x000000ffUL);
+    }
+}
+
+void spi_transmit_32(uint32_t data)
+{
+    Test_EVE_spi_transmit_32.called++;
+    if (EVE_spi_test_buffer_index < (EVE_TEST_BUFFER_SIZE - 4u))
+    {
+        EVE_spi_test_buffer[EVE_spi_test_buffer_index++] = (uint8_t)(data & 0x000000ffUL);
+        EVE_spi_test_buffer[EVE_spi_test_buffer_index++] = (uint8_t)(data >> 8U);
+        EVE_spi_test_buffer[EVE_spi_test_buffer_index++] = (uint8_t)(data >> 16U);
+        EVE_spi_test_buffer[EVE_spi_test_buffer_index++] = (uint8_t)(data >> 24U);
+    }
+}
+
+void spi_transmit_burst(uint32_t data)
+{
+    Test_EVE_spi_transmit_burst.called++;
+    if (EVE_spi_test_buffer_index < (EVE_TEST_BUFFER_SIZE - 4u))
+    {
+        EVE_spi_test_buffer[EVE_spi_test_buffer_index++] = (uint8_t)(data & 0x000000ffUL);
+        EVE_spi_test_buffer[EVE_spi_test_buffer_index++] = (uint8_t)(data >> 8U);
+        EVE_spi_test_buffer[EVE_spi_test_buffer_index++] = (uint8_t)(data >> 16U);
+        EVE_spi_test_buffer[EVE_spi_test_buffer_index++] = (uint8_t)(data >> 24U);
+    }
+}
+
+uint8_t spi_receive(uint8_t data)
+{
+    Test_EVE_spi_receive.called++;
+    uint8_t result = 0;
+
+    if (EVE_spi_test_buffer_index < (EVE_TEST_BUFFER_SIZE - 1u))
+    {
+        result = EVE_spi_test_buffer_receive[EVE_spi_test_buffer_index];
+        EVE_spi_test_buffer[EVE_spi_test_buffer_index] = data;
+        EVE_spi_test_buffer_index++;
+    }
+
+    return result;
+}
+
+uint8_t fetch_flash_byte(const uint8_t *p_data)
+{
+    Test_EVE_fetch_flash_byte.called++;
+    (void)p_data;
+    return 0x00;
+}
+
+/* Test helper functions */
+void EVE_test_reset_counters(void)
+{
+    memset(&Test_EVE_pdn_set, 0, sizeof(test_call_counter_t));
+    memset(&Test_EVE_pdn_clear, 0, sizeof(test_call_counter_t));
+    memset(&Test_EVE_cs_set, 0, sizeof(test_call_counter_t));
+    memset(&Test_EVE_cs_clear, 0, sizeof(test_call_counter_t));
+    memset(&Test_EVE_spi_transmit, 0, sizeof(test_call_counter_t));
+    memset(&Test_EVE_spi_transmit_32, 0, sizeof(test_call_counter_t));
+    memset(&Test_EVE_spi_transmit_32_addr, 0, sizeof(test_call_counter_t));
+    memset(&Test_EVE_spi_transmit_burst, 0, sizeof(test_call_counter_t));
+    memset(&Test_EVE_spi_receive, 0, sizeof(test_call_counter_t));
+    memset(&Test_EVE_fetch_flash_byte, 0, sizeof(test_call_counter_t));
+
+    memset(EVE_spi_test_buffer, 0, sizeof(EVE_spi_test_buffer));
+    EVE_spi_test_buffer_index = 0;
+    memset(EVE_spi_test_buffer_receive, 0, sizeof(EVE_spi_test_buffer_receive));
+}
+
+void EVE_test_print_report(void)
+{
+    printf("\n=== EVE Test Report ===\n");
+    printf("EVE_cs_set:             called %u times\n", Test_EVE_cs_set.called);
+    printf("EVE_cs_clear:           called %u times\n", Test_EVE_cs_clear.called);
+    printf("spi_transmit:           called %u times\n", Test_EVE_spi_transmit.called);
+    printf("spi_transmit_32:        called %u times\n", Test_EVE_spi_transmit_32.called);
+    printf("spi_transmit_32_addr:   called %u times\n", Test_EVE_spi_transmit_32_addr.called);
+    printf("spi_transmit_burst:     called %u times\n", Test_EVE_spi_transmit_burst.called);
+    printf("spi_receive:            called %u times\n", Test_EVE_spi_receive.called);
+    printf("fetch_flash_byte:       called %u times\n", Test_EVE_fetch_flash_byte.called);
+    printf("=======================\n\n");
+}
+
+#endif /* SOFTWARE_TEST */
 
 #endif
