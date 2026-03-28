@@ -2,14 +2,14 @@
 @file    EVE_supplemental.h
 @brief   supplemental functions
 @version 6.0
-@date    2025-04-19
+@date    2026-03-28
 @author  Rudolph Riedel
 
 @section LICENSE
 
 MIT License
 
-Copyright (c) 2016-2025 Rudolph Riedel
+Copyright (c) 2016-2026 Rudolph Riedel
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -32,6 +32,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 6.0
 - modified for BT820
+- fix: EVE_polar_cartesian() sign aware rounding
 
 */
 
@@ -125,7 +126,8 @@ void EVE_polar_cartesian(const uint16_t length, const uint16_t angle, int16_t * 
     if (p_xc0 != NULL)
     {
         int32_t calc = (int16_t) length;
-        calc = ((calc * (sine_table[anglev])) + 64) / 128;
+        calc = (calc * (int32_t)sine_table[anglev]);
+        calc = (calc >= 0) ? (calc + 63) / 127 : (calc - 63) / 127;
         *p_xc0 = (int16_t) calc;
     }
 
@@ -135,7 +137,8 @@ void EVE_polar_cartesian(const uint16_t length, const uint16_t angle, int16_t * 
         anglev = anglev % 360U;
 
         int32_t calc = (int16_t) length;
-        calc = ((calc * (sine_table[anglev])) + 64) / 128;
+        calc = (calc * (int32_t)sine_table[anglev]);
+        calc = (calc >= 0) ? (calc + 63) / 127 : (calc - 63) / 127;
         *p_yc0 = (int16_t) calc;
     }
 }
