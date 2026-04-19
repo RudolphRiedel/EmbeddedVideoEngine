@@ -47,6 +47,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 - moved BT82x functions to EVE_commands_BT82x.c / .h
 - added EVE_execute_cmd_and_get_result() to replace duplicate code sequences
 - implemented EVE_cmd_memwrite() and EVE_cmd_memwrite_burst()
+- split private_string_write() and made the new private_string_write_burst() about 20% faster
 
 */
 
@@ -438,63 +439,62 @@ static void private_string_write(const char * const p_text)
     const uint8_t *const p_bytes = (const uint8_t *)p_text;
     uint8_t exit_flag = 0U;
 
-    if (0U == g_cmd_burst)
+    for (uint8_t textindex = 0U; (textindex < 249U) && (0U == exit_flag); textindex += 4U)
     {
-        for (uint8_t textindex = 0U; (textindex < 249U) && (0U == exit_flag); textindex += 4U)
-        {
-            uint32_t calc = 0U;
+        uint32_t calc = 0U;
 
-            for (uint8_t index = 0U; index < 4U; index++)
+        for (uint8_t index = 0U; index < 4U; index++)
+        {
+            uint8_t data;
+
+            data = p_bytes[textindex + index];
+
+            if (0U == data)
             {
-                uint8_t data;
-
-                data = p_bytes[textindex + index];
-
-                if (0U == data)
-                {
-                    exit_flag = 1U; /* leave outer loop */
-                    break; /* leave inner loop */
-                }
-                calc += ((uint32_t)data) << (index * 8U);
+                exit_flag = 1U; /* leave outer loop */
+                break; /* leave inner loop */
             }
-
-            spi_transmit_32(calc);
+            calc += ((uint32_t)data) << (index * 8U);
         }
 
-        if(0U == exit_flag) /* left outer loop because the string is too long, send zeroes to terminate the string */
-        {
-            spi_transmit_32(0U);
-        }
+        spi_transmit_32(calc);
     }
-    else /* we are in burst mode, so every transfer is 32 bits */
+
+    if(0U == exit_flag) /* left outer loop because the string is too long, send zeroes to terminate the string */
     {
-        for (uint8_t textindex = 0U; (textindex < 249U) && (0U == exit_flag); textindex += 4U)
-        {
-            uint32_t calc = 0U;
-
-            for (uint8_t index = 0U; index < 4U; index++)
-            {
-                uint8_t data;
-
-                data = p_bytes[textindex + index];
-
-                if (0U == data)
-                {
-                    exit_flag = 1U; /* leave outer loop */
-                    break; /* leave inner loop */
-                }
-                calc += ((uint32_t)data) << (index * 8U);
-            }
-
-            spi_transmit_burst(calc);
-        }
-
-        if(0U == exit_flag) /* left outer loop because the string is too long, send zeroes to terminate the string */
-        {
-            spi_transmit_burst(0U);
-        }
+        spi_transmit_32(0U);
     }
 }
+
+static void private_string_write_burst(const char * const p_text);
+
+static void private_string_write_burst(const char * const p_text)
+{
+    const uint8_t *p_bytes = (const uint8_t *)p_text;
+
+    for (uint8_t index = 0U; index < 63U; index++)
+    {
+        uint8_t b0 = *p_bytes; if (b0 != 0U) { p_bytes++; }
+        uint8_t b1 = *p_bytes; if (b1 != 0U) { p_bytes++; }
+        uint8_t b2 = *p_bytes; if (b2 != 0U) { p_bytes++; }
+        uint8_t b3 = *p_bytes; if (b3 != 0U) { p_bytes++; }
+#if defined (EVE_DMA)
+        uint32_t calc = (uint32_t)b0 | ((uint32_t)b1 << 8U) | ((uint32_t)b2 << 16U) | ((uint32_t)b3 << 24U);
+        spi_transmit_burst(calc);
+#else
+        spi_transmit(b0);
+        spi_transmit(b1);
+        spi_transmit(b2);
+        spi_transmit(b3);
+#endif
+        if (0U == b3)
+        {
+            return;
+        }
+    }
+    spi_transmit_burst(0U);
+}
+
 
 /* ##################################################################
     coprocessor commands that are not used in displays lists,
@@ -2413,7 +2413,7 @@ void EVE_cmd_button_var(const int16_t xc0, const int16_t yc0, const uint16_t wid
         spi_transmit_burst(i16_i16_to_u32(xc0, yc0));
         spi_transmit_burst(u16_u16_to_u32(wid, hgt));
         spi_transmit_burst(u16_u16_to_u32(font, options));
-        private_string_write(p_text);
+        private_string_write_burst(p_text);
 
         if (((uint16_t) (options & EVE_OPT_FORMAT)) != 0U)
         {
@@ -2441,7 +2441,7 @@ void EVE_cmd_button_var_burst(const int16_t xc0, const int16_t yc0, const uint16
     spi_transmit_burst(i16_i16_to_u32(xc0, yc0));
     spi_transmit_burst(u16_u16_to_u32(wid, hgt));
     spi_transmit_burst(u16_u16_to_u32(font, options));
-    private_string_write(p_text);
+    private_string_write_burst(p_text);
 
     if (((uint16_t) (options & EVE_OPT_FORMAT)) != 0U)
     {
@@ -2487,7 +2487,7 @@ void EVE_cmd_text_var(const int16_t xc0, const int16_t yc0, const uint16_t font,
         spi_transmit_burst(CMD_TEXT);
         spi_transmit_burst(i16_i16_to_u32(xc0, yc0));
         spi_transmit_burst(u16_u16_to_u32(font, options));
-        private_string_write(p_text);
+        private_string_write_burst(p_text);
 
         if (((uint16_t) (options & EVE_OPT_FORMAT)) != 0U)
         {
@@ -2514,7 +2514,7 @@ void EVE_cmd_text_var_burst(const int16_t xc0, const int16_t yc0, const uint16_t
     spi_transmit_burst(CMD_TEXT);
     spi_transmit_burst(i16_i16_to_u32(xc0, yc0));
     spi_transmit_burst(u16_u16_to_u32(font, options));
-    private_string_write(p_text);
+    private_string_write_burst(p_text);
 
     if (((uint16_t) (options & EVE_OPT_FORMAT)) != 0U)
     {
@@ -2563,7 +2563,7 @@ void EVE_cmd_toggle_var(const int16_t xc0, const int16_t yc0, const uint16_t wid
         spi_transmit_burst(i16_i16_to_u32(xc0, yc0));
         spi_transmit_burst(u16_u16_to_u32(wid, font));
         spi_transmit_burst(u16_u16_to_u32(options, state));
-        private_string_write(p_text);
+        private_string_write_burst(p_text);
 
         if (((uint16_t) (options & EVE_OPT_FORMAT)) != 0U)
         {
@@ -2591,7 +2591,7 @@ void EVE_cmd_toggle_var_burst(const int16_t xc0, const int16_t yc0, const uint16
     spi_transmit_burst(i16_i16_to_u32(xc0, yc0));
     spi_transmit_burst(u16_u16_to_u32(wid, font));
     spi_transmit_burst(u16_u16_to_u32(options, state));
-    private_string_write(p_text);
+    private_string_write_burst(p_text);
 
     if (((uint16_t) (options & EVE_OPT_FORMAT)) != 0U)
     {
@@ -2689,7 +2689,7 @@ void EVE_cmd_button(const int16_t xc0, const int16_t yc0, const uint16_t wid, co
         spi_transmit_burst(i16_i16_to_u32(xc0, yc0));
         spi_transmit_burst(u16_u16_to_u32(wid, hgt));
         spi_transmit_burst(u16_u16_to_u32(font, options));
-        private_string_write(p_text);
+        private_string_write_burst(p_text);
     }
 }
 
@@ -2703,7 +2703,7 @@ void EVE_cmd_button_burst(const int16_t xc0, const int16_t yc0, const uint16_t w
     spi_transmit_burst(i16_i16_to_u32(xc0, yc0));
     spi_transmit_burst(u16_u16_to_u32(wid, hgt));
     spi_transmit_burst(u16_u16_to_u32(font, options));
-    private_string_write(p_text);
+    private_string_write_burst(p_text);
 }
 
 /**
@@ -3022,7 +3022,7 @@ void EVE_cmd_keys(const int16_t xc0, const int16_t yc0, const uint16_t wid, cons
         spi_transmit_burst(i16_i16_to_u32(xc0, yc0));
         spi_transmit_burst(u16_u16_to_u32(wid, hgt));
         spi_transmit_burst(u16_u16_to_u32(font, options));
-        private_string_write(p_text);
+        private_string_write_burst(p_text);
     }
 }
 
@@ -3038,7 +3038,7 @@ void EVE_cmd_keys_burst(const int16_t xc0, const int16_t yc0, const uint16_t wid
     spi_transmit_burst(i16_i16_to_u32(xc0, yc0));
     spi_transmit_burst(u16_u16_to_u32(wid, hgt));
     spi_transmit_burst(u16_u16_to_u32(font, options));
-    private_string_write(p_text);
+    private_string_write_burst(p_text);
 }
 
 /**
@@ -3726,7 +3726,7 @@ void EVE_cmd_text(const int16_t xc0, const int16_t yc0, const uint16_t font, con
         spi_transmit_burst(CMD_TEXT);
         spi_transmit_burst(i16_i16_to_u32(xc0, yc0));
         spi_transmit_burst(u16_u16_to_u32(font, options));
-        private_string_write(p_text);
+        private_string_write_burst(p_text);
     }
 }
 
@@ -3738,7 +3738,7 @@ void EVE_cmd_text_burst(const int16_t xc0, const int16_t yc0, const uint16_t fon
     spi_transmit_burst(CMD_TEXT);
     spi_transmit_burst(i16_i16_to_u32(xc0, yc0));
     spi_transmit_burst(u16_u16_to_u32(font, options));
-    private_string_write(p_text);
+    private_string_write_burst(p_text);
 }
 
 /**
@@ -3762,7 +3762,7 @@ void EVE_cmd_toggle(const int16_t xc0, const int16_t yc0, const uint16_t wid, co
         spi_transmit_burst(i16_i16_to_u32(xc0, yc0));
         spi_transmit_burst(u16_u16_to_u32(wid, font));
         spi_transmit_burst(u16_u16_to_u32(options, state));
-        private_string_write(p_text);
+        private_string_write_burst(p_text);
     }
 }
 
@@ -3776,7 +3776,7 @@ void EVE_cmd_toggle_burst(const int16_t xc0, const int16_t yc0, const uint16_t w
     spi_transmit_burst(i16_i16_to_u32(xc0, yc0));
     spi_transmit_burst(u16_u16_to_u32(wid, font));
     spi_transmit_burst(u16_u16_to_u32(options, state));
-    private_string_write(p_text);
+    private_string_write_burst(p_text);
 }
 
 /**
