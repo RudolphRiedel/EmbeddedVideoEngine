@@ -2,7 +2,7 @@
 @file    EVE_commands_BT82x
 @brief   contains BT82 functions
 @version 6.0
-@date    2025-09-21
+@date    2026-04-28
 @author  Rudolph Riedel
 
 @section info
@@ -14,7 +14,7 @@ The c-standard is C99.
 
 MIT License
 
-Copyright (c) 2016-2025 Rudolph Riedel
+Copyright (c) 2016-2026 Rudolph Riedel
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -51,6 +51,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define DUMMY_BYTE ((uint8_t) 0x00U)
 #define FIFO_BIT_MASK ((uint16_t)0x3fffU)
 #define MEM_WRITE ((uint32_t) 0x80000000L) /* EVE Host Memory Write */
+
+/* define NULL if it not already is */
+#ifndef NULL
+#include <stddef.h>
+#endif
 
 /* ##################################################################
     helper functions

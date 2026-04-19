@@ -2,7 +2,7 @@
 @file    EVE_supplemental.h
 @brief   supplemental functions
 @version 6.0
-@date    2026-03-28
+@date    2026-04-19
 @author  Rudolph Riedel
 
 @section LICENSE
@@ -40,7 +40,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /* define NULL if it not already is */
 #ifndef NULL
-#include <stdio.h>
+#include <stddef.h>
 #endif
 
 #if defined (__AVR__)

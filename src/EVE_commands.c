@@ -2,7 +2,7 @@
 @file    EVE_commands.c
 @brief   contains FT8xx / BT8xx functions
 @version 6.0
-@date    2026-01-10
+@date    2026-04-19
 @author  Rudolph Riedel
 
 @section info
@@ -56,7 +56,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /* define NULL if it not already is */
 #ifndef NULL
-#include <stdio.h>
+#include <stddef.h>
 #endif
 
 volatile uint8_t g_cmd_burst = 0U; /* flag to indicate cmd-burst is active */
