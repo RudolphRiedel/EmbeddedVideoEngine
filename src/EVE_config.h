@@ -2,7 +2,7 @@
 @file    EVE_config.h
 @brief   configuration information for some TFTs
 @version 6.0
-@date    2026-01-18
+@date    2026-05-14
 @author  Rudolph Riedel
 
 @section LICENSE
@@ -145,8 +145,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /* ########## 320 x 240 ########## */
 
+/* EVE2-35G 320x240 3.5" Matrix Orbital, capacitive touch, FT813 */
 /* EVE2-35A 320x240 3.5" Matrix Orbital, resistive, or non-touch, FT812 */
-#if defined (EVE_EVE2_35)
+#if defined (EVE_EVE2_35) || defined (EVE_EVE2_35G)
 #define Resolution_320x240
 
 #define EVE_PCLK ((uint32_t) 9UL)
@@ -156,21 +157,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define EVE_GEN 2
 #endif
 
-/* EVE2-35G 320x240 3.5" Matrix Orbital, capacitive touch, FT813 */
 #if defined (EVE_EVE2_35G)
-#define Resolution_320x240
-
-#define EVE_PCLK ((uint32_t) 9UL)
-#define EVE_PCLKPOL ((uint32_t) 0UL)
-#define EVE_SWIZZLE ((uint32_t) 0UL)
-#define EVE_CSPREAD ((uint32_t) 1UL)
-#define EVE_GEN 2
 #define EVE_HAS_GT911 /* special treatment required for out-of-spec touch-controller */
 #endif
 
-/* untested */
+/* EVE3-35G 320x240 3.5" Matrix Orbital, capacitive-touch, BT815 */
 /* EVE3-35A 320x240 3.5" Matrix Orbital, resistive, or non-touch, BT816 */
-#if defined (EVE_EVE3_35)
+#if defined (EVE_EVE3_35) || defined (EVE_EVE3_35G)
 #define Resolution_320x240
 
 #define EVE_PCLK ((uint32_t) 11UL)
@@ -181,16 +174,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define EVE_GEN 3
 #endif
 
-/* EVE3-35G 320x240 3.5" Matrix Orbital, capacitive-touch, BT815 */
 #if defined (EVE_EVE3_35G)
-#define Resolution_320x240
-
-#define EVE_PCLK ((uint32_t) 11UL)
-#define EVE_PCLKPOL ((uint32_t) 0UL)
-#define EVE_SWIZZLE ((uint32_t) 0UL)
-#define EVE_CSPREAD ((uint32_t) 1UL)
-#define EVE_HAS_CRYSTAL
-#define EVE_GEN 3
 #define EVE_HAS_GT911 /* special treatment required for out-of-spec touch-controller */
 #endif
 
@@ -298,9 +282,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /* ########## 480 x 272 ########## */
 
-/* untested */
 /* EVE2-43A 480x272 4.3" Matrix Orbital, resistive or no touch, FT812 */
-#if defined (EVE_EVE2_43)
+/* EVE2-43G 480x272 4.3" Matrix Orbital, capacitive touch, FT813 */
+#if defined (EVE_EVE2_43) || defined (EVE_EVE2_43G)
 #define Resolution_480x272
 
 #define EVE_PCLK ((uint32_t) 6UL)
@@ -310,21 +294,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define EVE_GEN 2
 #endif
 
-/* EVE2-43G 480x272 4.3" Matrix Orbital, capacitive touch, FT813 */
 #if defined (EVE_EVE2_43G)
-#define Resolution_480x272
-
-#define EVE_PCLK ((uint32_t) 6UL)
-#define EVE_PCLKPOL ((uint32_t) 1UL)
-#define EVE_SWIZZLE ((uint32_t) 0UL)
-#define EVE_CSPREAD ((uint32_t) 1UL)
-#define EVE_GEN 2
 #define EVE_HAS_GT911 /* special treatment required for out-of-spec touch-controller */
 #endif
 
-/* untested */
 /* EVE3-43A 480x272 4.3" Matrix Orbital, resistive, or non-touch, BT816 */
-#if defined (EVE_EVE3_43)
+/* EVE3-43G 480x272 4.3" Matrix Orbital, capacitive-touch, BT815 */
+#if defined (EVE_EVE3_43) || defined (EVE_EVE3_43G)
 #define Resolution_480x272
 
 #define EVE_PCLK ((uint32_t) 7UL)
@@ -335,16 +311,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define EVE_GEN 3
 #endif
 
-/* EVE3-43G 480x272 4.3" Matrix Orbital, capacitive-touch, BT815 */
 #if defined (EVE_EVE3_43G)
-#define Resolution_480x272
-
-#define EVE_PCLK ((uint32_t) 7UL)
-#define EVE_PCLKPOL ((uint32_t) 1UL)
-#define EVE_SWIZZLE ((uint32_t) 0UL)
-#define EVE_CSPREAD ((uint32_t) 1UL)
-#define EVE_HAS_CRYSTAL
-#define EVE_GEN 3
 #define EVE_HAS_GT911
 #endif
 
@@ -390,7 +357,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /* untested */
 /* PS817-043WQ-C-IPS 480x272 4.3" Panasys, BT817 */
-#if defined (EVE_PS817_043WQ_C_IPS)
+/* PS816-043WQ-R-IPS 480x272 4.3" Panasys, resistive touch, BT816 */
+#if defined (EVE_PS817_043WQ_C_IPS) || defined (EVE_PS816_043WQ_R_IPS)
 #define EVE_HSIZE ((uint32_t) 480UL)
 #define EVE_VSIZE ((uint32_t) 272UL)
 
@@ -407,28 +375,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define EVE_SWIZZLE ((uint32_t) 0UL)
 #define EVE_CSPREAD ((uint32_t) 0UL)
 #define EVE_HAS_CRYSTAL
+#endif
+
+#if defined (EVE_PS817_043WQ_C_IPS)
 #define EVE_GEN 4
 #endif
 
-/* untested */
-/* PS816-043WQ-R-IPS 480x272 4.3" Panasys, resistive touch, BT816 */
 #if defined (EVE_PS816_043WQ_R_IPS)
-#define EVE_HSIZE ((uint32_t) 480UL)
-#define EVE_VSIZE ((uint32_t) 272UL)
-
-#define EVE_VSYNC0 ((uint32_t) 0UL)
-#define EVE_VSYNC1 ((uint32_t) 4UL)
-#define EVE_VOFFSET ((uint32_t) 12UL)
-#define EVE_VCYCLE ((uint32_t) 292UL)
-#define EVE_HSYNC0 ((uint32_t) 0UL)
-#define EVE_HSYNC1 ((uint32_t) 4UL)
-#define EVE_HOFFSET ((uint32_t) 43UL)
-#define EVE_HCYCLE ((uint32_t) 531UL)
-#define EVE_PCLK ((uint32_t) 7UL)
-#define EVE_PCLKPOL ((uint32_t) 1UL)
-#define EVE_SWIZZLE ((uint32_t) 0UL)
-#define EVE_CSPREAD ((uint32_t) 0UL)
-#define EVE_HAS_CRYSTAL
 #define EVE_GEN 3
 #endif
 
@@ -748,46 +701,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /* untested */
 /* PS815-043W-C-IPS 800x480 4.3" Panasys, BT815 */
-#if defined (EVE_PS815_043W_C_IPS)
-#define Resolution_800x480
-
-#define EVE_PCLK ((uint32_t) 2UL)
-#define EVE_PCLKPOL ((uint32_t) 1UL)
-#define EVE_SWIZZLE ((uint32_t) 0UL)
-#define EVE_CSPREAD ((uint32_t) 1UL)
-#define EVE_HAS_CRYSTAL
-#define EVE_GEN 3
-#endif
-
-/* untested */
 /* PS815-050W-C-IPS 800x480 5.0" Panasys, BT815 */
-#if defined (EVE_PS815_050W_C_IPS)
-#define Resolution_800x480
-
-#define EVE_PCLK ((uint32_t) 2UL)
-#define EVE_PCLKPOL ((uint32_t) 1UL)
-#define EVE_SWIZZLE ((uint32_t) 0UL)
-#define EVE_CSPREAD ((uint32_t) 1UL)
-#define EVE_HAS_CRYSTAL
-#define EVE_GEN 3
-#endif
-
-/* untested */
 /* PS815-070W-C-IPS 800x480 7.0" Panasys, BT815 */
-#if defined (EVE_PS815_070W_C_IPS)
-#define Resolution_800x480
-
-#define EVE_PCLK ((uint32_t) 2UL)
-#define EVE_PCLKPOL ((uint32_t) 1UL)
-#define EVE_SWIZZLE ((uint32_t) 0UL)
-#define EVE_CSPREAD ((uint32_t) 1UL)
-#define EVE_HAS_CRYSTAL
-#define EVE_GEN 3
-#endif
-
-/* untested */
 /* PS815-090W-C-IPS 800x480 9.0" Panasys, BT815 */
-#if defined (EVE_PS815_090W_C_IPS)
+#if defined (EVE_PS815_043W_C_IPS) || defined (EVE_PS815_050W_C_IPS) || defined (EVE_PS815_070W_C_IPS) || defined (EVE_PS815_090W_C_IPS)
 #define Resolution_800x480
 
 #define EVE_PCLK ((uint32_t) 2UL)
@@ -857,28 +774,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 /* FT810CB-HY50HD: FT810 800x480 5.0" HAOYU */
-#if defined (EVE_FT810CB_HY50HD)
-#define EVE_HSIZE ((uint32_t) 800UL)
-#define EVE_VSIZE ((uint32_t) 480UL)
-
-#define EVE_VSYNC0 ((uint32_t) 0UL)
-#define EVE_VSYNC1 ((uint32_t) 2UL)
-#define EVE_VOFFSET ((uint32_t) 13UL)
-#define EVE_VCYCLE ((uint32_t) 525UL)
-#define EVE_HSYNC0 ((uint32_t) 0UL)
-#define EVE_HSYNC1 ((uint32_t) 20UL)
-#define EVE_HOFFSET ((uint32_t) 64UL)
-#define EVE_HCYCLE ((uint32_t) 952UL)
-#define EVE_PCLK ((uint32_t) 2UL)
-#define EVE_PCLKPOL ((uint32_t) 1UL)
-#define EVE_SWIZZLE ((uint32_t) 0UL)
-#define EVE_CSPREAD ((uint32_t) 1UL)
-#define EVE_HAS_CRYSTAL
-#define EVE_GEN 2
-#endif
-
 /* FT811CB-HY50HD: FT811 800x480 5.0" HAOYU */
-#if defined (EVE_FT811CB_HY50HD)
+#if defined (EVE_FT810CB_HY50HD) || defined (EVE_FT811CB_HY50HD)
 #define EVE_HSIZE ((uint32_t) 800UL)
 #define EVE_VSIZE ((uint32_t) 480UL)
 
@@ -995,8 +892,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 /* untested but confirmed to be working */
 /* EVE4x-70G IPS 1024x600 7" Matrix Orbital, capacitive touch, BT817 */
 #if defined (EVE_EVE4_70G)
-#define EVE_HSIZE (1024UL)
-#define EVE_VSIZE (600UL)
+#define EVE_HSIZE ((uint32_t) 1024UL)
+#define EVE_VSIZE ((uint32_t) 600UL)
 
 #define EVE_VSYNC0 ((uint32_t) 0UL)
 #define EVE_VSYNC1 ((uint32_t) 10UL)
@@ -1250,9 +1147,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define EVE_GEN 2
 #endif
 
+/* EVE2-38G 480x116 3.8" 1U Matrix Orbital, capacitive touch, FT813 */
 /* EVE2-38A 480x116 3.8" 1U Matrix Orbital, resistive touch, FT812 */
 // timings are from here: https://github.com/MatrixOrbital/EVE2-Library/blob/master/Eve2_81x.c
-#if defined (EVE_EVE2_38)
+#if defined (EVE_EVE2_38) || defined (EVE_EVE2_38G)
 #define EVE_HSIZE ((uint32_t) 480UL)
 #define EVE_VSIZE ((uint32_t) 272UL)
 
@@ -1274,59 +1172,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define EVE_VSIZE_VISIBLE ((uint32_t) 116UL)
 #endif
 
-/* EVE2-38G 480x116 3.8" 1U Matrix Orbital, capacitive touch, FT813 */
-// timings are from here: https://github.com/MatrixOrbital/EVE2-Library/blob/master/Eve2_81x.c
 #if defined (EVE_EVE2_38G)
-#define EVE_HSIZE ((uint32_t) 480UL)
-#define EVE_VSIZE ((uint32_t) 272UL)
-
-#define EVE_VSYNC0 ((uint32_t) 152UL)
-#define EVE_VSYNC1 ((uint32_t) 10UL)
-#define EVE_VOFFSET ((uint32_t) 12UL)
-#define EVE_VCYCLE ((uint32_t) 292UL)
-#define EVE_HSYNC0 ((uint32_t) 0UL)
-#define EVE_HSYNC1 ((uint32_t) 41UL)
-#define EVE_HOFFSET ((uint32_t) 43UL)
-#define EVE_HCYCLE ((uint32_t) 524UL)
-#define EVE_PCLKPOL ((uint32_t) 1UL)
-#define EVE_SWIZZLE ((uint32_t) 0UL)
-#define EVE_PCLK ((uint32_t) 6UL)
-#define EVE_CSPREAD ((uint32_t) 1UL)
-#define EVE_GEN 2
 #define EVE_HAS_GT911 /* special treatment required for out-of-spec touch-controller */
-#define EVE_TYPE_BAR
-#define EVE_HSIZE_VISIBLE ((uint32_t) 480UL)
-#define EVE_VSIZE_VISIBLE ((uint32_t) 116UL)
-#endif
-
-/* untested */
-/* EVE3x-38A 480x116 3.8" 1U Matrix Orbital, resistive touch, BT816 */
-// timings are from here: https://github.com/MatrixOrbital/EVE2-Library/blob/master/Eve2_81x.c
-#if defined (EVE_EVE3x_38)
-#define EVE_HSIZE ((uint32_t) 480UL)
-#define EVE_VSIZE ((uint32_t) 272UL)
-
-#define EVE_VSYNC0 ((uint32_t) 152UL)
-#define EVE_VSYNC1 ((uint32_t) 10UL)
-#define EVE_VOFFSET ((uint32_t) 12UL)
-#define EVE_VCYCLE ((uint32_t) 292UL)
-#define EVE_HSYNC0 ((uint32_t) 0UL)
-#define EVE_HSYNC1 ((uint32_t) 41UL)
-#define EVE_HOFFSET ((uint32_t) 43UL)
-#define EVE_HCYCLE ((uint32_t) 524UL)
-#define EVE_PCLKPOL ((uint32_t) 1UL)
-#define EVE_SWIZZLE ((uint32_t) 0UL)
-#define EVE_PCLK ((uint32_t) 7UL)
-#define EVE_CSPREAD ((uint32_t) 1UL)
-#define EVE_GEN 3
-#define EVE_HSIZE_VISIBLE ((uint32_t) 480UL)
-#define EVE_VSIZE_VISIBLE (uint32_t) (116UL)
 #endif
 
 /* untested */
 /* EVE3-38G 480x116 3.8" 1U Matrix Orbital, capacitive touch, BT815 */
+/* EVE3x-38A 480x116 3.8" 1U Matrix Orbital, resistive touch, BT816 */
 // timings are from here: https://github.com/MatrixOrbital/EVE2-Library/blob/master/Eve2_81x.c
-#if defined (EVE_EVE3x_38G)
+#if defined (EVE_EVE3x_38) || defined (EVE_EVE3x_38G)
 #define EVE_HSIZE ((uint32_t) 480UL)
 #define EVE_VSIZE ((uint32_t) 272UL)
 
@@ -1340,45 +1194,22 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define EVE_HCYCLE ((uint32_t) 524UL)
 #define EVE_PCLKPOL ((uint32_t) 1UL)
 #define EVE_SWIZZLE ((uint32_t) 0UL)
-#define EVE_PCLK ((uint32_t) 6UL)
+#define EVE_PCLK ((uint32_t) 7UL)
 #define EVE_CSPREAD ((uint32_t) 1UL)
 #define EVE_GEN 3
+#define EVE_HSIZE_VISIBLE ((uint32_t) 480UL)
+#define EVE_VSIZE_VISIBLE ((uint32_t) (116UL))
+#endif
+
+#if defined (EVE_EVE3x_38G)
 #define EVE_HAS_GT911 /* special treatment required for out-of-spec touch-controller */
-#define EVE_TYPE_BAR
-#define EVE_HSIZE_VISIBLE ((uint32_t) 480UL)
-#define EVE_VSIZE_VISIBLE (116UL)
 #endif
 
 /* untested */
-// timings are from here: https://github.com/MatrixOrbital/EVE2-Library/blob/master/Eve2_81x.c
-/* EVE3x-39A 480x128 3.9" 1U Matrix Orbital, resistive touch, BT816 */
-#if defined (EVE_EVE3x_39)
-#define EVE_HSIZE ((uint32_t) 480UL)
-#define EVE_VSIZE ((uint32_t) 272UL)
-
-#define EVE_VSYNC0 ((uint32_t) 7UL)
-#define EVE_VSYNC1 ((uint32_t) 8UL)
-#define EVE_VOFFSET ((uint32_t) 12UL)
-#define EVE_VCYCLE ((uint32_t) 288UL)
-#define EVE_HSYNC0 ((uint32_t) 0UL)
-#define EVE_HSYNC1 ((uint32_t) 44UL)
-#define EVE_HOFFSET ((uint32_t) 16UL)
-#define EVE_HCYCLE ((uint32_t) 524UL)
-#define EVE_PCLKPOL ((uint32_t) 1UL)
-#define EVE_SWIZZLE ((uint32_t) 0UL)
-#define EVE_PCLK ((uint32_t) 7UL)
-#define EVE_CSPREAD ((uint32_t) 1UL)
-#define EVE_HAS_CRYSTAL
-#define EVE_GEN 3
-#define EVE_TYPE_BAR
-#define EVE_HSIZE_VISIBLE ((uint32_t) 480UL)
-#define EVE_VSIZE_VISIBLE ((uint32_t) 128UL)
-#endif
-
-/* untested */
-// timings are from here: https://github.com/MatrixOrbital/EVE2-Library/blob/master/Eve2_81x.c
 /* EVE3x-39G 480x128 3.9" 1U Matrix Orbital, capacitive touch, BT815 */
-#if defined (EVE_EVE3x_39G)
+/* EVE3x-39A 480x128 3.9" 1U Matrix Orbital, resistive touch, BT816 */
+// timings are from here: https://github.com/MatrixOrbital/EVE2-Library/blob/master/Eve2_81x.c
+#if defined (EVE_EVE3x_39) || defined (EVE_EVE3x_39G)
 #define EVE_HSIZE ((uint32_t) 480UL)
 #define EVE_VSIZE ((uint32_t) 272UL)
 
@@ -1396,10 +1227,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define EVE_CSPREAD ((uint32_t) 1UL)
 #define EVE_HAS_CRYSTAL
 #define EVE_GEN 3
-#define EVE_HAS_GT911
 #define EVE_TYPE_BAR
 #define EVE_HSIZE_VISIBLE ((uint32_t) 480UL)
 #define EVE_VSIZE_VISIBLE ((uint32_t) 128UL)
+#endif
+
+#if defined (EVE_EVE3x_39G)
+#define EVE_HAS_GT911
 #endif
 
 /* Crystalfonts CFAF480128A0-039TC 480x128 3.9" , FT811 capacitive touch */
@@ -1501,7 +1335,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define EVE_HSYNC0 ((uint32_t) 0UL)   /* Thf Horizontal Front Porch */
 #define EVE_HSYNC1 ((uint32_t) 10UL)  /* Thf + Thp Horizontal Front Porch plus Hsync Pulse width */
 #define EVE_HOFFSET ((uint32_t) 70UL) /* Thf + Thp + Thb Length of non-visible part of line (in PCLK cycles) */
-#define EVE_HCYCLE (uint32_t) 408UL) /* Th Total length of line (visible and non-visible) (in PCLKs) */
+#define EVE_HCYCLE ((uint32_t) 408UL) /* Th Total length of line (visible and non-visible) (in PCLKs) */
 #endif
 
 #if defined (Resolution_480x272)
