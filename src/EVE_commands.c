@@ -2,7 +2,7 @@
 @file    EVE_commands.c
 @brief   contains FT8xx / BT8xx functions
 @version 6.0
-@date    2026-04-19
+@date    2026-07-17
 @author  Rudolph Riedel
 
 @section info
@@ -48,7 +48,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 - added EVE_execute_cmd_and_get_result() to replace duplicate code sequences
 - implemented EVE_cmd_memwrite() and EVE_cmd_memwrite_burst()
 - split private_string_write() and made the new private_string_write_burst() about 20% faster
-
+- Bugfix: the correct CLKSEL parameter for the BT81x PLL range is 0x46, not 0x86
 */
 
 #include "EVE_commands.h"
@@ -1671,7 +1671,7 @@ uint8_t EVE_init(void)
 #endif
 
 #if EVE_GEN > 2
-    EVE_cmdWrite(EVE_CLKSEL, 0x86U); /* set clock to 72 MHz */
+    EVE_cmdWrite(EVE_CLKSEL, 0x46U); /* set clock to 72 MHz */
 #endif
 
     EVE_cmdWrite(EVE_ACTIVE, 0U); /* start EVE */
