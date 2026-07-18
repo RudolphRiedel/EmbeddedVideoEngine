@@ -2,7 +2,7 @@
 @file    EVE_commands_BT82x
 @brief   contains BT82 functions
 @version 6.0
-@date    2026-04-28
+@date    2026-07-18
 @author  Rudolph Riedel
 
 @section info
@@ -40,7 +40,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 - split from EVE_commands.c
 - implemented the remaining BT82x extension commands
 - split private_string_write() and made the new private_string_write_burst() about 20% faster
-
+- increased the initial delay after ACTIVATE to 60ms and added EVE_CUSTOM_MS_DELAY
+    to match the EVE_init() in EVE_commands.c
 */
 
 #include "EVE_commands_BT82x.h"
@@ -1077,6 +1078,7 @@ void EVE_write_display_parameters(void)
  * @note - EVE_BACKLIGHT_FREQ - configure the backlight frequency, default is not writing it which results in 250Hz.
  * @note - EVE_BACKLIGHT_PWM - configure the backlight pwm, defaults to 0x20 / 25%.
  * @note - EVE_SOFT_RESET - if defined the host command RST_PULSE is send
+ * @note - EVE_CUSTOM_MS_DELAY - is used for an extra DELAY_MS() as option if the panel in use requires more time to start
  */
 uint8_t EVE_init(void)
 {
@@ -1101,9 +1103,14 @@ uint8_t EVE_init(void)
     EVE_cmdWrite(EVE_SETSYSCLKDIV, 0x17U); /* set SYSCLK_DIV to the default value of 7 for a the system clock of 72MHz. */
     EVE_cmdWrite(EVE_ACTIVE, 0U); /* start EVE */
 
-    DELAY_MS(50U); /* give EVE a moment of silence to power up, a BT820 answers about 34ms after ACTIVE and booting takes about 27ms */
+    DELAY_MS(60U); /* give EVE a moment of silence to power up, a BT820 answers about 34ms after ACTIVE and booting takes about 27ms */
 
-    ret = wait_boot();
+    /* optional extra startup delay in milliseconds if there are timing issues with the panel in use */
+#if defined (EVE_CUSTOM_MS_DELAY)
+    DELAY_MS(EVE_CUSTOM_MS_DELAY);
+#endif
+
+ret = wait_boot();
     if (E_OK == ret)
     {
 #if defined (EVE_BACKLIGHT_FREQ)
