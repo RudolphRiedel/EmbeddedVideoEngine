@@ -2,14 +2,14 @@
 @file    EVE_supplemental.h
 @brief   prototypes for supplemental functions
 @version 6.0
-@date    2024-09-20
+@date    2026-05-17
 @author  Rudolph Riedel
 
 @section LICENSE
 
 MIT License
 
-Copyright (c) 2016-2025 Rudolph Riedel
+Copyright (c) 2016-2026 Rudolph Riedel
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -32,13 +32,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 6.0
 - modified for BT820
+- Compliance: fixed linter warnings
 
 */
 
 #ifndef EVE_SUPPLEMENTAL_H
 #define EVE_SUPPLEMENTAL_H
-
-#include "EVE.h"
 
 #ifdef __cplusplus
 extern "C"

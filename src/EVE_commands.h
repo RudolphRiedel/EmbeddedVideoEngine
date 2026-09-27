@@ -1,8 +1,8 @@
 /*
 @file    EVE_commands.h
-@brief   contains FT8xx / BT8xx function prototypes
+@brief   FT8xx / BT8xx function prototypes
 @version 6.0
-@date    2026-01-10
+@date    2026-09-27
 @author  Rudolph Riedel
 
 @section LICENSE
@@ -38,13 +38,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 - moved BT82x functions to EVE_commands_BT82x.c / .h
 - added EVE_execute_cmd_and_get_result() to replace duplicate code sequences
 - implemented EVE_cmd_memwrite() and EVE_cmd_memwrite_burst()
+- Compliance: fixed linter warnings
 
 */
 
 #ifndef EVE_COMMANDS_H
 #define EVE_COMMANDS_H
-
-#include "EVE.h"
 
 #if !defined E_OK
 #define E_OK 0U
@@ -310,8 +309,8 @@ void EVE_cmd_keys_burst(const int16_t xc0, const int16_t yc0, const uint16_t wid
                         const uint16_t font, const uint16_t options, const char * const p_text);
 void EVE_cmd_loadidentity(void);
 void EVE_cmd_loadidentity_burst(void);
-void EVE_cmd_memwrite(uint32_t dest, uint32_t num, const uint8_t *p_data);
-void EVE_cmd_memwrite_burst(uint32_t dest, uint32_t num, const uint8_t *p_data);
+void EVE_cmd_memwrite(const uint32_t dest, const uint32_t num, const uint8_t * const p_data);
+void EVE_cmd_memwrite_burst(const uint32_t dest, const uint32_t num, const uint8_t * const p_data);
 void EVE_cmd_number(const int16_t xc0, const int16_t yc0, const uint16_t font, const uint16_t options, const int32_t number);
 void EVE_cmd_number_burst(const int16_t xc0, const int16_t yc0, const uint16_t font, const uint16_t options, const int32_t number);
 void EVE_cmd_progress(const int16_t xc0, const int16_t yc0, const uint16_t wid, const uint16_t hgt,

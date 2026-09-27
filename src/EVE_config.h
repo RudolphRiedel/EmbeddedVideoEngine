@@ -2,7 +2,7 @@
 @file    EVE_config.h
 @brief   configuration information for some TFTs
 @version 6.0
-@date    2026-05-14
+@date    2026-09-27
 @author  Rudolph Riedel
 
 @section LICENSE
@@ -42,7 +42,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 /* define one of these in your build-environment to select the settings for the TFT attached */
 #if 0
 /* BT820 */
+#define VM820B10A
 #define VM820C_1024600
+#define VM820C_1280800
 
 
 /* BT817 / BT818 */
@@ -134,6 +136,23 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define EVE_GAMEDUINO3
 
 #endif
+
+
+/* BT82x  defines */
+
+#define LVDS_MODE_JEIDA_18 ((uint32_t) 0UL)
+#define LVDS_MODE_JEIDA_24 ((uint32_t) 1UL)
+#define LVDS_MODE_VESA_24 ((uint32_t) 2UL)
+#define LVDS_MODE_VESA_18 ((uint32_t) 3UL)
+
+/* 1-pixel per clock for single LVDS channel mode */
+#define LVDS_SO_MODE_1 ((uint32_t) 0UL)
+/* 2-pixel per clock for single LVDS channel mode */
+#define LVDS_SO_MODE_2 ((uint32_t) 1UL)
+/* 2-pixel per clock for dual LVDS channel mode */
+#define LVDS_SO_MODE_3 ((uint32_t) 2UL)
+/* 4-pixel per clock for dual LVDS channel mode */
+#define LVDS_SO_MODE_4 ((uint32_t) 3UL)
 
 /* display timing parameters below */
 
@@ -1297,9 +1316,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define EVE_HSYNC1 ((uint32_t) 20UL)
 #define EVE_HOFFSET ((uint32_t) 160UL)
 #define EVE_HCYCLE ((uint32_t) 1344UL)
-//#define EVE_PCLK_FREQ ((uint32_t) 0x0D12UL) /* value to be put into REG_PCLK_FREQ -> 51MHz, REG_PCLK is set to 1 */
 #define EVE_PCLKPOL ((uint32_t) 1UL)
 #define EVE_CSPREAD ((uint32_t) 0UL)
+#define EVE_LVDS_MODE LVDS_MODE_VESA_24
+#define EVE_LVDS_SO_MODE LVDS_SO_MODE_2
+#define EVE_LVDS_PLL_CKS ((uint8_t) 1U) /* LVDS TX clock range selection: 1 = LVDXTX clock * 7 < 400MHz */
+/* Division factor to generate scanclk_2x from system PLL. */
+#define EVE_LVDS_PLL_DIV ((uint8_t) 5U) /* 576MHz / (5+1) = 96MHz -> LVDSTX = 48MHz */
+#define EVE_LVDS_SINGLE_CHANNEL
 #define EVE_GEN 5
 #endif
 
@@ -1316,11 +1340,42 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define EVE_HSYNC1 ((uint32_t) 72UL)
 #define EVE_HOFFSET ((uint32_t) 160UL)
 #define EVE_HCYCLE ((uint32_t) 1440UL)
-//#define EVE_PCLK_FREQ ((uint32_t) 0x0D12UL) /* value to be put into REG_PCLK_FREQ -> 51MHz, REG_PCLK is set to 1 */
 #define EVE_PCLKPOL ((uint32_t) 1UL)
 #define EVE_CSPREAD ((uint32_t) 0UL)
+#define EVE_LVDS_MODE LVDS_MODE_JEIDA_18
+#define EVE_LVDS_SO_MODE LVDS_SO_MODE_2
+#define EVE_LVDS_PLL_CKS ((uint8_t) 2U) /* LVDS TX clock range selection: 2 = LVDXTX clock * 7 >= 400MHz */
+/* Division factor to generate scanclk_2x from system PLL. */
+#define EVE_LVDS_PLL_DIV ((uint8_t) 3U) /* 576MHz / (3+1) = 144MHz -> LVDSTX = 72MHz */
+#define EVE_LVDS_SINGLE_CHANNEL
 #define EVE_GEN 5
 #endif
+
+/* Bridgetek 10.1" 1280x800 with ILI2132 */
+#if defined (VM820B10A)
+#define EVE_HSIZE ((uint32_t) 1280UL)
+#define EVE_VSIZE ((uint32_t) 800UL)
+
+#define EVE_VSYNC0 ((uint32_t) 0UL)
+#define EVE_VSYNC1 ((uint32_t) 15UL)
+#define EVE_VOFFSET ((uint32_t) 38UL)
+#define EVE_VCYCLE ((uint32_t) 838UL)
+#define EVE_HSYNC0 ((uint32_t) 0L)
+#define EVE_HSYNC1 ((uint32_t) 72UL)
+#define EVE_HOFFSET ((uint32_t) 160UL)
+#define EVE_HCYCLE ((uint32_t) 1440UL)
+#define EVE_PCLKPOL ((uint32_t) 1UL)
+#define EVE_CSPREAD ((uint32_t) 0UL)
+#define EVE_LVDS_MODE LVDS_MODE_VESA_24
+#define EVE_LVDS_SO_MODE LVDS_SO_MODE_2
+#define EVE_LVDS_PLL_CKS ((uint8_t) 2U) /* LVDS TX clock range selection: 2 = LVDXTX clock * 7 >= 400MHz */
+/* Division factor to generate scanclk_2x from system PLL. */
+#define EVE_LVDS_PLL_DIV ((uint8_t) 3U) /* 576MHz / (3+1) = 144MHz -> LVDSTX = 72MHz */
+#define EVE_LVDS_SINGLE_CHANNEL
+#define EVE_PATCH_TOUCH
+#define EVE_GEN 5
+#endif
+
 
 /* ########## Common Timings ########## */
 

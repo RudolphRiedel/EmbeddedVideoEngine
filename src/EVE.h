@@ -1,15 +1,15 @@
 /*
 @file    EVE.h
-@brief   Contains FT81x/BT81x/BT82x API definitions
+@brief   FT81x/BT81x/BT82x API definitions
 @version 6.0
-@date    2025-09-20
+@date    2026-09-27
 @author  Rudolph Riedel
 
 @section LICENSE
 
 MIT License
 
-Copyright (c) 2016-2025 Rudolph Riedel
+Copyright (c) 2016-2026 Rudolph Riedel
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -51,6 +51,7 @@ extern "C"
 #include "EVE_config.h"
 #include "EVE_commands.h"
 #include "EVE_commands_BT82x.h"
+#include "EVE_commands_BT82x_patch.h"
 #include "EVE_dl_commands.h"
 
 
@@ -1186,47 +1187,6 @@ static inline uint32_t TAG(const uint32_t tagval)
 #define CMD_WAITCHANGE          ((uint32_t) 0xFFFFFF67UL)
 #define CMD_WAITCOND            ((uint32_t) 0xFFFFFF78UL)
 #define CMD_WATCHDOG            ((uint32_t) 0xFFFFFF83UL)
-
-/* the following commands require a patch loaded with CMD_LOADPATCH */
-
-#define EVE_OPT_DECIMAL     ((uint16_t) 0x0010U)
-#define EVE_OPT_TIMECOLON   ((uint16_t) 0x0020U)
-#define EVE_OPT_NUMBER      ((uint16_t) 0x000FU)
-
-
-#define CMD_REGION          ((uint32_t) 0xFFFFFF8FUL)
-#define CMD_ENDREGION       ((uint32_t) 0xFFFFFF90UL)
-#define CMD_FSWRITE         ((uint32_t) 0xFFFFFF91UL)
-#define CMD_FSFILE          ((uint32_t) 0xFFFFFF92UL)
-#define CMD_FSSNAPSHOT      ((uint32_t) 0xFFFFFF93UL)
-#define CMD_FSCROPSHOT      ((uint32_t) 0xFFFFFF94UL)
-#define CMD_TEXTSCALE       ((uint32_t) 0xFFFFFF95UL)
-#define CMD_TEXTANGLE       ((uint32_t) 0xFFFFFF96UL)
-#define CMD_TEXTTICKER      ((uint32_t) 0xFFFFFF97UL)
-#define CMD_SEVENSEG        ((uint32_t) 0xFFFFFF98UL)
-#define CMD_MESSAGEBOX      ((uint32_t) 0xFFFFFF99UL)
-#define CMD_TOOLTIP         ((uint32_t) 0xFFFFFF9AUL)
-#define CMD_KEYBOARD        ((uint32_t) 0xFFFFFF9BUL)
-#define CMD_MEMORYINIT      ((uint32_t) 0xFFFFFF9CUL)
-#define CMD_MEMORYMALLOC    ((uint32_t) 0xFFFFFF9DUL)
-#define CMD_MEMORYFREE      ((uint32_t) 0xFFFFFF9EUL)
-#define CMD_LVDSSETUP       ((uint32_t) 0xFFFFFF9FUL)
-#define CMD_LVDSCONN        ((uint32_t) 0xFFFFFFA0UL)
-#define CMD_LVDSSTOP        ((uint32_t) 0xFFFFFFA1UL)
-#define CMD_LVDSSTART       ((uint32_t) 0xFFFFFFA2UL)
-#define CMD_BLURIMAGE       ((uint32_t) 0xFFFFFFA3UL)
-#define CMD_BLURSCREEN      ((uint32_t) 0xFFFFFFA4UL)
-#define CMD_BLURDRAW        ((uint32_t) 0xFFFFFFA5UL)
-#define CMD_LEDROUND        ((uint32_t) 0xFFFFFFA6UL)
-#define CMD_LEDRECT         ((uint32_t) 0xFFFFFFA7UL)
-#define CMD_FEEDBACKICON    ((uint32_t) 0xFFFFFFA8UL)
-#define CMD_MEMORYBITMAP    ((uint32_t) 0xFFFFFFA9UL)
-#define CMD_TEXTSIZE        ((uint32_t) 0xFFFFFFAAUL)
-#define CMD_PLOTDRAW        ((uint32_t) 0xFFFFFFABUL)
-#define CMD_PLOTSTREAM      ((uint32_t) 0xFFFFFFACUL)
-#define CMD_PLOTBITMAP      ((uint32_t) 0xFFFFFFADUL)
-#define CMD_TOUCHOFFSET     ((uint32_t) 0xFFFFFFAEUL)
-#define CMD_ENDTOUCHOFFSET  ((uint32_t) 0xFFFFFFAFUL)
 
 #else
 

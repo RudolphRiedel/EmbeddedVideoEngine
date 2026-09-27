@@ -2,7 +2,7 @@
 @file    EVE_target.h
 @brief   target specific includes, definitions and functions
 @version 6.0
-@date    2026-02-01
+@date    2026-09-27
 @author  Rudolph Riedel
 
 @section LICENSE
@@ -34,6 +34,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 - modified for 6.0
 - improved to support Arduino Every
 - added SOFTWARE_TEST target
+- added Emulation target for use with bt8xxemu.dll
 
 */
 
@@ -279,6 +280,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if defined (SOFTWARE_TEST)
 
 #include "EVE_target/EVE_target_Test.h"
+
+#endif
+
+#if defined (EVE_EMULATION)
+
+#include "EVE_target/EVE_target_Emulation.h"
 
 #endif
 

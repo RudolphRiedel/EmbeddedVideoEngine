@@ -2,14 +2,14 @@
 @file    EVE_target.c
 @brief   target specific functions for plain C targets
 @version 6.0
-@date    2026-02-01
+@date    2026-09-27
 @author  Rudolph Riedel
 
 @section LICENSE
 
 MIT License
 
-Copyright (c) 2016-2024 Rudolph Riedel
+Copyright (c) 2016-2026 Rudolph Riedel
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -37,7 +37,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
  */
 
-#include "EVE_target.h"
+#include "EVE.h"
 
 #if !defined (ARDUINO)
 

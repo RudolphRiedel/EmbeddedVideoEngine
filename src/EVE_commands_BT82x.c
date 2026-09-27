@@ -1,8 +1,8 @@
 /*
 @file    EVE_commands_BT82x
-@brief   contains BT82 functions
+@brief   BT82 functions
 @version 6.0
-@date    2026-07-18
+@date    2026-09-27
 @author  Rudolph Riedel
 
 @section info
@@ -40,19 +40,19 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 - split from EVE_commands.c
 - implemented the remaining BT82x extension commands
 - split private_string_write() and made the new private_string_write_burst() about 20% faster
-- increased the initial delay after ACTIVATE to 60ms and added EVE_CUSTOM_MS_DELAY
-    to match the EVE_init() in EVE_commands.c
+- compliance: fixed linter warnings
+- added touch patch for VM820B10A
+
 */
 
-#include "EVE_commands_BT82x.h"
-
+#include "EVE.h"
 
 /* BT820 */
 #if EVE_GEN > 4
 
 #define DUMMY_BYTE ((uint8_t) 0x00U)
 #define FIFO_BIT_MASK ((uint16_t)0x3fffU)
-#define MEM_WRITE ((uint32_t) 0x80000000L) /* EVE Host Memory Write */
+#define MEM_WRITE ((uint32_t) 0x80000000U) /* EVE Host Memory Write */
 
 /* define NULL if it not already is */
 #ifndef NULL
@@ -226,11 +226,21 @@ void EVE_memWrite_flash_buffer(uint32_t const ft_address, const uint8_t * const 
         EVE_cs_set();
         spi_transmit_32_addr(MEM_WRITE | ft_address);
 
-        uint32_t length = (len | 0x03UL);
-
-        for (uint32_t count = 0U; count < length; count++)
+        for (uint32_t count = 0U; count < len; count++)
         {
             spi_transmit(fetch_flash_byte(&p_data[count]));
+        }
+
+        uint8_t padding;
+
+        padding = (uint8_t) (len & 3U); /* 0, 1, 2 or 3 */
+        padding = 4U - padding;         /* 4, 3, 2 or 1 */
+        padding &= 3U;                  /* 3, 2, 1 or 0 */
+
+        while (padding > 0U)
+        {
+            spi_transmit(0U);
+            padding--;
         }
 
         EVE_cs_clear();
@@ -248,11 +258,21 @@ void EVE_memWrite_sram_buffer(uint32_t const ft_address, const uint8_t * const p
         EVE_cs_set();
         spi_transmit_32_addr(MEM_WRITE | ft_address);
 
-        uint32_t length = (len | 0x03UL);
-
-        for (uint32_t count = 0U; count < length; count++)
+        for (uint32_t count = 0U; count < len; count++)
         {
             spi_transmit(p_data[count]);
+        }
+
+        uint8_t padding;
+
+        padding = (uint8_t) (len & 3U); /* 0, 1, 2 or 3 */
+        padding = 4U - padding;         /* 4, 3, 2 or 1 */
+        padding &= 3U;                  /* 3, 2, 1 or 0 */
+
+        while (padding > 0U)
+        {
+            spi_transmit(0U);
+            padding--;
         }
 
         EVE_cs_clear();
@@ -287,9 +307,7 @@ void EVE_memRead_sram_buffer(uint32_t const ft_address, uint8_t * const p_data, 
 
         if (timeout < READ_TIMEOUT)
         {
-            uint32_t length = (len | 0x03UL);
-
-            for (uint32_t count = 0U; count < length; count++)
+            for (uint32_t count = 0U; count < len; count++)
             {
                 p_data[count] = spi_receive(DUMMY_BYTE); /* read data byte by sending dummy bytes */
             }
@@ -334,35 +352,6 @@ static void private_string_write(const char * const p_text)
     {
         spi_transmit_32(0U);
     }
-}
-
-static void private_string_write_burst(const char * const p_text);
-
-static void private_string_write_burst(const char * const p_text)
-{
-    const uint8_t *p_bytes = (const uint8_t *)p_text;
-
-    for (uint8_t index = 0U; index < 63U; index++)
-    {
-        uint8_t b0 = *p_bytes; if (b0 != 0U) { p_bytes++; }
-        uint8_t b1 = *p_bytes; if (b1 != 0U) { p_bytes++; }
-        uint8_t b2 = *p_bytes; if (b2 != 0U) { p_bytes++; }
-        uint8_t b3 = *p_bytes; if (b3 != 0U) { p_bytes++; }
-#if defined (EVE_DMA)
-        uint32_t calc = (uint32_t)b0 | ((uint32_t)b1 << 8U) | ((uint32_t)b2 << 16U) | ((uint32_t)b3 << 24U);
-        spi_transmit_burst(calc);
-#else
-        spi_transmit(b0);
-        spi_transmit(b1);
-        spi_transmit(b2);
-        spi_transmit(b3);
-#endif
-        if (0U == b3)
-        {
-            return;
-        }
-    }
-    spi_transmit_burst(0U);
 }
 
 
@@ -504,12 +493,14 @@ void EVE_cmd_inflate(const uint32_t ptr, const uint32_t options, const uint8_t *
     spi_transmit_32(options);
     EVE_cs_clear();
 
-    if (0UL == options) /* direct data, not by Media-FIFO, Flash or SD */
+    if ((UINT32_C(0) == options) && /* direct data, not by Media-FIFO, Flash or SD */
+        (p_data != NULL))
     {
-        if (p_data != NULL)
-        {
-            block_transfer(p_data, len);
-        }
+        block_transfer(p_data, len);
+    }
+    else
+    {
+        EVE_execute_cmd();
     }
 }
 
@@ -527,12 +518,14 @@ void EVE_cmd_loadasset(const uint32_t ptr, const uint32_t options, const uint8_t
     spi_transmit_32(options);
     EVE_cs_clear();
 
-    if (0UL == options) /* direct data, not by Media-FIFO, Flash or SD */
+    if ((UINT32_C(0) == options) && /* direct data, not by Media-FIFO, Flash or SD */
+        (p_data != NULL))
     {
-        if (p_data != NULL)
-        {
-            block_transfer(p_data, len);
-        }
+        block_transfer(p_data, len);
+    }
+    else
+    {
+        EVE_execute_cmd();
     }
 }
 
@@ -552,14 +545,16 @@ void EVE_cmd_loadimage(const uint32_t ptr, const uint32_t options, const uint8_t
     spi_transmit_32(options);
     EVE_cs_clear();
 
-    if ((0UL == (options & EVE_OPT_MEDIAFIFO)) &&
-        (0UL == (options & EVE_OPT_FLASH)) &&
-        (0UL == (options & EVE_OPT_FS))) /* direct data, neither by Media-FIFO or from Flash */
+    if ((UINT32_C(0) == (options & EVE_OPT_MEDIAFIFO)) &&
+        (UINT32_C(0) == (options & EVE_OPT_FLASH)) &&
+        (UINT32_C(0) == (options & EVE_OPT_FS)) && /* direct data, neither by Media-FIFO or from Flash */
+        (p_data != NULL))
     {
-        if (p_data != NULL)
-        {
-            block_transfer(p_data, len);
-        }
+        block_transfer(p_data, len);
+    }
+    else
+    {
+        EVE_execute_cmd();
     }
 }
 
@@ -575,12 +570,14 @@ void EVE_cmd_loadpatch(const uint32_t options, const uint8_t * const p_data, con
     spi_transmit_32(options);
     EVE_cs_clear();
 
-    if (0UL == options) /* direct data, not by Media-FIFO, Flash or SD */
+   if ((UINT32_C(0) == options) && /* direct data, not by Media-FIFO, Flash or SD */
+        (p_data != NULL))
     {
-        if (p_data != NULL)
-        {
-            block_transfer(p_data, len);
-        }
+        block_transfer(p_data, len);
+    }
+    else
+    {
+        EVE_execute_cmd();
     }
 }
 
@@ -597,12 +594,14 @@ void EVE_cmd_loadwav(const uint32_t ptr, const uint32_t options, const uint8_t *
     spi_transmit_32(options);
     EVE_cs_clear();
 
-    if (0UL == options) /* direct data, not by Media-FIFO, Flash or SD */
+   if ((UINT32_C(0) == options) && /* direct data, not by Media-FIFO, Flash or SD */
+        (p_data != NULL))
     {
-        if (p_data != NULL)
-        {
-            block_transfer(p_data, len);
-        }
+        block_transfer(p_data, len);
+    }
+    else
+    {
+        EVE_execute_cmd();
     }
 }
 
@@ -619,12 +618,14 @@ void EVE_cmd_playwav(const uint32_t ptr, const uint32_t options, const uint8_t *
     spi_transmit_32(options);
     EVE_cs_clear();
 
-    if (0UL == options) /* direct data, not by Media-FIFO, Flash or SD */
+   if ((UINT32_C(0) == options) && /* direct data, not by Media-FIFO, Flash or SD */
+        (p_data != NULL))
     {
-        if (p_data != NULL)
-        {
-            block_transfer(p_data, len);
-        }
+        block_transfer(p_data, len);
+    }
+    else
+    {
+        EVE_execute_cmd();
     }
 }
 
@@ -638,7 +639,7 @@ void EVE_cmd_rendertarget(const uint32_t dest, const uint16_t format, const uint
 {
     eve_begin_cmd(CMD_RENDERTARGET);
     spi_transmit_32(dest);
-    spi_transmit_32(i16_i16_to_u32(format, wid));
+    spi_transmit_32(u16_u16_to_u32(format, wid));
     spi_transmit_32(u16_u16_to_u32(hgt, 0U));
     EVE_cs_clear();
     EVE_execute_cmd();
@@ -702,248 +703,121 @@ void EVE_cmd_videostart(const uint32_t options)
     EVE_execute_cmd();
 }
 
-/* the following commands require a patch loaded with CMD_LOADPATCH */
-
-/**
- * @brief Write to an existing file on the SD card file system.
- * @note - Meant to be called outside display-list building.
- * @note - Includes executing the command and waiting for completion.
- * @note - Does not support burst-mode.
- */
-uint32_t EVE_cmd_fswrite(const uint32_t addr, const char * const p_name)
-{
-    eve_begin_cmd(CMD_FSWRITE);
-    spi_transmit_32(addr);
-    private_string_write(p_name);
-    return EVE_execute_cmd_and_get_result();
-}
-
-/**
- * @brief Add or resize files on the SD card file system.
- * @note - Meant to be called outside display-list building.
- * @note - Includes executing the command and waiting for completion.
- * @note - Does not support burst-mode.
- */
-uint32_t EVE_cmd_fsfile(const uint32_t size, const char * const p_name)
-{
-    eve_begin_cmd(CMD_FSFILE);
-    spi_transmit_32(size);
-    private_string_write(p_name);
-    return EVE_execute_cmd_and_get_result();
-}
-
-/**
- * @brief Write a bitmap screenshot to the SD card file system.
- * @note - Meant to be called outside display-list building.
- * @note - Includes executing the command and waiting for completion.
- * @note - Does not support burst-mode.
- */
-uint32_t EVE_cmd_fssnapshot(const uint32_t addr, const char * const p_name)
-{
-    eve_begin_cmd(CMD_FSSNAPSHOT);
-    spi_transmit_32(addr);
-    private_string_write(p_name);
-    return EVE_execute_cmd_and_get_result();
-}
-
-/**
- * @brief Write a portion of the screen to the SD card file system.
- * @note - Meant to be called outside display-list building.
- * @note - Includes executing the command and waiting for completion.
- * @note - Does not support burst-mode.
- */
-uint32_t EVE_cmd_fscropshot(const uint32_t addr, const char * const p_name, const int16_t xco, const int16_t yco, const uint16_t wid, const uint16_t hgt)
-{
-    eve_begin_cmd(CMD_FSCROPSHOT);
-    spi_transmit_32(addr);
-    private_string_write(p_name);
-    spi_transmit_32(i16_i16_to_u32(xco, yco));
-    spi_transmit_32(u16_u16_to_u32(wid, hgt));
-    return EVE_execute_cmd_and_get_result();
-}
-
-/**
- * @brief Initialise RAM_G memory for reusable allocation by the coprocessor.
- * @note - Meant to be called outside display-list building.
- * @note - Includes executing the command and waiting for completion.
- * @note - Does not support burst-mode.
- */
-void EVE_cmd_memoryinit(const uint32_t addr, const uint32_t size)
-{
-    eve_begin_cmd(CMD_MEMORYINIT);
-    spi_transmit_32(addr);
-    spi_transmit_32(size);
-    EVE_cs_clear();
-    EVE_execute_cmd();
-}
-
-/**
- * @brief Reserve a fixed size of RAM_G memory from the coprocessor.
- * @note - Meant to be called outside display-list building.
- * @note - Includes executing the command and waiting for completion.
- * @note - Does not support burst-mode.
- */
-uint32_t EVE_cmd_memorymalloc(const uint32_t size)
-{
-    eve_begin_cmd(CMD_MEMORYMALLOC);
-    spi_transmit_32(size);
-    return EVE_execute_cmd_and_get_result();
-}
-
-/**
- * @brief Free a previously reserved area of RAM_G memory from the coprocessor.
- * @note - Meant to be called outside display-list building.
- * @note - Includes executing the command and waiting for completion.
- * @note - Does not support burst-mode.
- */
-void EVE_cmd_memoryfree(const uint32_t addr, const uint32_t size)
-{
-    eve_begin_cmd(CMD_MEMORYFREE);
-    spi_transmit_32(addr);
-    spi_transmit_32(size);
-    EVE_cs_clear();
-    EVE_execute_cmd();
-}
-
-/**
- * @brief Setup REG_LVDSRX_CTRL and REG_LVDSRX_SETUP.
- * @note - Meant to be called outside display-list building.
- * @note - Includes executing the command and waiting for completion.
- * @note - Does not support burst-mode.
- */
-void EVE_cmd_lvdssetup(const uint16_t setup, const uint16_t ctrl)
-{
-    eve_begin_cmd(CMD_LVDSSETUP);
-    spi_transmit_32(u16_u16_to_u32(setup, ctrl));
-    EVE_cs_clear();
-    EVE_execute_cmd();
-}
-
-/**
- * @brief Test for an active LVDS connection to the LVDS RX channel.
- * @note - Meant to be called outside display-list building.
- * @note - Includes executing the command and waiting for completion.
- * @note - Does not support burst-mode.
- */
-uint32_t EVE_cmd_lvdsconn(void)
-{
-    eve_begin_cmd(CMD_LVDSCONN);
-    return EVE_execute_cmd_and_get_result();
-}
-
-/**
- * @brief Stop LVDS decoding.
- * @note - Meant to be called outside display-list building.
- * @note - Includes executing the command and waiting for completion.
- * @note - Does not support burst-mode.
- */
-void EVE_cmd_lvdsstop(void)
-{
-    eve_begin_cmd(CMD_LVDSSTOP);
-    EVE_cs_clear();
-    EVE_execute_cmd();
-}
-
-/**
- * @brief Activate LVDS decoding.
- * @note - Meant to be called outside display-list building.
- * @note - Includes executing the command and waiting for completion.
- * @note - Does not support burst-mode.
- */
-void EVE_cmd_lvdsstart(void)
-{
-    eve_begin_cmd(CMD_LVDSSTART);
-    EVE_cs_clear();
-    EVE_execute_cmd();
-}
-
-/**
- * @brief Create a blurred copy of an image.
- * @note - Meant to be called outside display-list building.
- * @note - Includes executing the command and waiting for completion.
- * @note - Does not support burst-mode.
- */
-void EVE_cmd_blurimage(const uint32_t source, const uint32_t dest, const uint16_t format, const uint16_t width, const uint16_t height)
-{
-    eve_begin_cmd(CMD_BLURIMAGE);
-    spi_transmit_32(source);
-    spi_transmit_32(dest);
-    spi_transmit_32(u16_u16_to_u32(format, width));
-    spi_transmit_32(u16_u16_to_u32(height, 0U));
-    EVE_cs_clear();
-    EVE_execute_cmd();
-}
-
-/**
- * @brief Reserve an area of RAM_G memory from the coprocessor to fit a bitmap of specified size and format.
- * @note - Meant to be called outside display-list building.
- * @note - Includes executing the command and waiting for completion.
- * @note - Does not support burst-mode.
- */
-uint32_t EVE_cmd_memorybitmap(const uint16_t format, const uint16_t width, const uint16_t height, const uint16_t addn)
-{
-    eve_begin_cmd(CMD_MEMORYBITMAP);
-    spi_transmit_32(u16_u16_to_u32(format, width));
-    spi_transmit_32(u16_u16_to_u32(height, addn));
-    return EVE_execute_cmd_and_get_result();
-}
-
-/**
- * @brief Calculate the exact on-screen width and height in pixels of a multiline message.
- * @note - Meant to be called outside display-list building.
- * @note - Includes executing the command and waiting for completion.
- * @note - Does not support burst-mode.
- */
-void EVE_cmd_textsize(const uint16_t font, const uint16_t options, const char * const p_text, uint16_t * const p_width, uint16_t * const p_height)
-{
-    uint32_t result;
-
-    eve_begin_cmd(CMD_TEXTSIZE);
-    spi_transmit_32(u16_u16_to_u32(font, options));
-    private_string_write(p_text);
-    result = EVE_execute_cmd_and_get_result();
-
-    if (p_width != NULL)
-    {
-        *p_width = (uint16_t)(result & 0xFFFFU);
-    }
-
-    if (p_height != NULL)
-    {
-        *p_height = (uint16_t)((result >> 16U) & 0xFFFFU);
-    }
-}
-
-/**
- * @brief Stream data in BARGRAPH bitmap format into a buffer in RAM_G.
- * @note - Meant to be called outside display-list building.
- * @note - Includes executing the command and waiting for completion.
- * @note - Does not support burst-mode.
- */
-void EVE_cmd_plotbitmap(const uint32_t address, const uint16_t len, const uint16_t opt, const uint32_t handle, const uint8_t * const p_data)
-{
-    eve_begin_cmd(CMD_PLOTBITMAP);
-    spi_transmit_32(address);
-    spi_transmit_32(u16_u16_to_u32(len, opt));
-    spi_transmit_32(handle);
-    EVE_cs_clear();
-    if (p_data != NULL)
-    {
-        block_transfer(p_data, len);
-    }
-}
-
 
 /* ##################################################################
     init functions
 ##################################################################### */
 
+#if defined (EVE_PATCH_TOUCH)
+
+#if defined (__AVR__)
+#include <avr/pgmspace.h>
+#else
+#define PROGMEM
+#endif
+
+static const uint8_t touch_patch[2908] PROGMEM =
+{
+    0x7c, 0xda, 0x00, 0x50, 0x00, 0x20, 0x54, 0x0b, 0x78, 0x9c, 0xed, 0x57, 0x7d, 0x74, 0x54, 0xc5, 0x15, 0x7f, 0xfb, 0x66, 0xbf, 0xb3, 0x09, 0xfb, 0x5a, 0xd4, 0x50, 0xd9, 0x40, 0x39, 0x24, 0xeb, 
+    0x07, 0x5f, 0x6a, 0x20, 0x22, 0x14, 0xe7, 0xed, 0xee, 0x7b, 0x64, 0x43, 0x83, 0x5f, 0x54, 0xd4, 0xc3, 0xd2, 0x5d, 0x93, 0x90, 0xc4, 0x84, 0x24, 0x86, 0xf7, 0x36, 0x60, 0x95, 0x4e, 0x14, 0x95, 
+    0xc2, 0x96, 0x84, 0x4f, 0x63, 0x14, 0x8c, 0x94, 0x83, 0x5a, 0x21, 0x72, 0x28, 0x16, 0x4e, 0x45, 0xd8, 0x17, 0x3e, 0xa2, 0x6e, 0x5c, 0xa5, 0x34, 0x04, 0xca, 0x01, 0xb7, 0x2a, 0x8a, 0x9e, 0x56, 
+    0x72, 0xaa, 0xe2, 0x17, 0xf8, 0x7a, 0x67, 0xde, 0x4b, 0xe1, 0xd8, 0xfe, 0xd5, 0xff, 0x7a, 0xce, 0xce, 0x9e, 0x99, 0xfb, 0x9b, 0x7b, 0xef, 0xcc, 0x9b, 0xb9, 0xf7, 0xce, 0x9d, 0x59, 0xae, 0x83, 
+    0x3b, 0x29, 0x24, 0xa7, 0xaf, 0xe5, 0x4e, 0x06, 0x93, 0x48, 0xe3, 0x5a, 0x57, 0x86, 0x1c, 0xca, 0xe1, 0x90, 0x47, 0xf9, 0x7a, 0x8a, 0xae, 0x6f, 0x0f, 0x79, 0x9a, 0x62, 0x4a, 0x45, 0xcd, 0x2f, 
+    0x95, 0x46, 0xb5, 0xa2, 0x66, 0x9a, 0x9e, 0x48, 0xea, 0xfa, 0x87, 0x8c, 0x6f, 0xbd, 0x61, 0xc2, 0x14, 0xa3, 0xff, 0xae, 0x55, 0xd7, 0xb9, 0x53, 0x5b, 0xd7, 0x70, 0x27, 0x9b, 0x92, 0xdc, 0x51, 
+    0xee, 0x34, 0xea, 0xb1, 0x14, 0x3c, 0x74, 0xdb, 0xd6, 0x3b, 0x26, 0x91, 0xc4, 0x1d, 0x3c, 0x69, 0x3b, 0x50, 0x3d, 0xe7, 0x0a, 0x65, 0x4a, 0x59, 0x6e, 0x66, 0x7b, 0xe8, 0xc7, 0x77, 0x85, 0x46, 
+    0x2b, 0xcd, 0xb1, 0x86, 0x45, 0x0b, 0xaa, 0x9a, 0x47, 0x2b, 0xb5, 0x0b, 0xab, 0x1a, 0x55, 0xa5, 0x3f, 0xc4, 0x93, 0x49, 0x64, 0xbd, 0xa0, 0xeb, 0x17, 0x43, 0x42, 0x8f, 0x90, 0xe4, 0xba, 0xb8, 
+    0x53, 0x93, 0x30, 0x27, 0x51, 0xca, 0xf5, 0xae, 0xc9, 0xd5, 0xf5, 0x82, 0x70, 0x41, 0x78, 0x8c, 0xb2, 0xc9, 0x5a, 0xd9, 0x4a, 0xbf, 0x90, 0xe8, 0xbb, 0x4e, 0x11, 0x92, 0xbd, 0x01, 0x94, 0x04, 
+    0xaa, 0x4d, 0xc0, 0xdc, 0x61, 0xda, 0xa2, 0x03, 0x5f, 0x9d, 0x43, 0xda, 0x7d, 0x76, 0xaf, 0xc6, 0x91, 0x18, 0x36, 0xda, 0xd5, 0x4e, 0x5d, 0x97, 0x09, 0xb7, 0x03, 0xa5, 0xff, 0xca, 0x8f, 0x98, 
+    0x5f, 0x8b, 0x17, 0x14, 0xbc, 0xc8, 0x5b, 0xb9, 0xe8, 0xad, 0xd2, 0x52, 0xf7, 0x95, 0x36, 0x32, 0x13, 0xe3, 0x42, 0x14, 0x13, 0xea, 0xdd, 0x38, 0x5c, 0x28, 0xd4, 0xcb, 0x85, 0xd7, 0x5a, 0x12, 
+    0xd1, 0x1a, 0x7d, 0x5b, 0xc8, 0xaf, 0x6d, 0x0b, 0x9d, 0x2e, 0xf7, 0xa5, 0xda, 0x7a, 0xb8, 0x76, 0xd4, 0x33, 0xc8, 0xeb, 0x7a, 0x50, 0x91, 0x15, 0xca, 0xf5, 0xa5, 0xbc, 0xda, 0xf3, 0xe2, 0x0b, 
+    0x21, 0x94, 0x6c, 0xeb, 0x41, 0xe4, 0xd3, 0x76, 0x94, 0xbe, 0x18, 0x29, 0x55, 0x4a, 0x95, 0x91, 0x2f, 0x20, 0x12, 0x85, 0x5e, 0x13, 0x71, 0xcc, 0x1f, 0x0b, 0xb8, 0x0b, 0xf0, 0x48, 0xc0, 0x37, 
+    0xed, 0xe2, 0x89, 0xf7, 0x71, 0x94, 0x9e, 0xaa, 0x8c, 0x03, 0xe4, 0x7e, 0x9a, 0xa2, 0x12, 0x40, 0xab, 0x3a, 0x86, 0xd0, 0x16, 0x8a, 0x8a, 0xb7, 0x6d, 0xe0, 0x4e, 0x1e, 0xb7, 0xe8, 0x3a, 0xa5, 
+    0x60, 0xc1, 0xbe, 0x2e, 0xa0, 0x6d, 0x3d, 0x46, 0xdf, 0x89, 0x47, 0x62, 0xca, 0xf3, 0x12, 0x8e, 0xcc, 0xc1, 0x42, 0x92, 0xcf, 0x44, 0x15, 0x6a, 0x73, 0xbc, 0xd6, 0xd0, 0xbd, 0x5f, 0xa1, 0x3e, 
+    0xb3, 0x92, 0x05, 0x8a, 0x13, 0xec, 0xeb, 0x6c, 0x8c, 0x57, 0x35, 0x2f, 0xa8, 0x6f, 0x6c, 0xd1, 0xfb, 0x43, 0x89, 0x24, 0x22, 0xdc, 0x61, 0x83, 0xef, 0x52, 0x1b, 0x2a, 0x0d, 0x41, 0x7f, 0xe8, 
+    0x7e, 0x85, 0x8e, 0xc3, 0xcc, 0xdb, 0x6d, 0xda, 0xa0, 0xb4, 0xb0, 0xf8, 0x63, 0xe9, 0x13, 0xc9, 0x81, 0xf9, 0x4c, 0x22, 0xd9, 0x2c, 0xb9, 0x33, 0xa1, 0x76, 0x63, 0xe6, 0xe9, 0x26, 0x75, 0x0d, 
+    0x96, 0x9a, 0x08, 0x9b, 0x54, 0xe8, 0xb5, 0x65, 0x5c, 0x98, 0x83, 0x15, 0x79, 0x07, 0xa9, 0x9d, 0x31, 0x69, 0x91, 0x56, 0x8a, 0x5e, 0xad, 0x45, 0x8a, 0x30, 0x9c, 0x10, 0x05, 0x0d, 0x0d, 0xdc, 
+    0x4a, 0xd0, 0x81, 0x39, 0xad, 0xc6, 0x88, 0x06, 0xdc, 0x1d, 0x18, 0x5a, 0x31, 0xfd, 0xaa, 0xae, 0xc7, 0x95, 0xd7, 0xa5, 0x75, 0xe1, 0x75, 0xe1, 0x85, 0x18, 0x74, 0x7b, 0xfe, 0x24, 0xd1, 0x76, 
+    0xb7, 0x44, 0x8a, 0x9b, 0x60, 0xcd, 0x5c, 0xaf, 0x33, 0x83, 0xb4, 0xed, 0x21, 0x7b, 0x73, 0x55, 0x75, 0x6d, 0x63, 0x83, 0xde, 0x67, 0x6d, 0x64, 0x5c, 0x17, 0xe3, 0xba, 0xaa, 0x1a, 0x2a, 0x0d, 
+    0x41, 0x9f, 0xd5, 0x5b, 0xfc, 0xbb, 0x62, 0x88, 0xbd, 0x24, 0x97, 0xcc, 0x27, 0x88, 0x5c, 0x58, 0x8d, 0xd2, 0x6d, 0xa6, 0x0f, 0x94, 0x35, 0x28, 0xdd, 0x0e, 0x18, 0x91, 0xbd, 0x80, 0x7a, 0x20, 
+    0x36, 0xef, 0x02, 0x3b, 0x45, 0x8b, 0x33, 0xe5, 0xe5, 0x7c, 0xa6, 0x7c, 0x0e, 0xff, 0x5e, 0xf9, 0x2f, 0x80, 0xde, 0x0d, 0x75, 0x2e, 0xe0, 0x7b, 0xf8, 0xc7, 0xf0, 0x6b, 0xc5, 0x7b, 0x8b, 0x5f, 
+    0x2f, 0xde, 0x57, 0xbc, 0xbf, 0x38, 0x09, 0x73, 0xfa, 0xb5, 0x45, 0xb2, 0x85, 0x78, 0x09, 0x3a, 0x32, 0x18, 0x5c, 0x29, 0xfa, 0x52, 0x9a, 0x92, 0x67, 0x43, 0x64, 0xf8, 0x5a, 0x94, 0xee, 0xca, 
+    0x1d, 0x07, 0xf3, 0x5f, 0x03, 0x68, 0x14, 0x71, 0x14, 0x0c, 0xc5, 0x97, 0x4c, 0xac, 0x26, 0x75, 0x9a, 0xd4, 0x63, 0x52, 0x2f, 0xa3, 0x77, 0x62, 0x3a, 0x17, 0xd4, 0x37, 0xa9, 0xc5, 0x72, 0xdc, 
+    0xd4, 0x12, 0x0e, 0x72, 0x71, 0x3f, 0x4a, 0xeb, 0x50, 0xe9, 0xee, 0xac, 0x99, 0xf5, 0xe1, 0x9c, 0xb2, 0x1c, 0xb7, 0x5f, 0xf3, 0x60, 0x5f, 0x6a, 0x7d, 0xd8, 0xab, 0x2d, 0xc4, 0x27, 0x94, 0x13, 
+    0xb0, 0x16, 0xaa, 0x4b, 0xfb, 0x54, 0x1a, 0x35, 0x2d, 0xfa, 0x0e, 0xf3, 0x7b, 0xa5, 0xd9, 0x3b, 0xc2, 0x7a, 0x35, 0x66, 0xef, 0x28, 0xeb, 0xd5, 0x9b, 0xbd, 0x7e, 0xd6, 0x6b, 0x32, 0x7b, 0x03, 
+    0xac, 0xd7, 0x19, 0x76, 0xb4, 0xe6, 0x94, 0xd1, 0xb9, 0x4e, 0x29, 0xf3, 0x4c, 0x09, 0x47, 0x50, 0x6f, 0x5e, 0xa6, 0x92, 0xf1, 0x6a, 0x58, 0x5b, 0xcf, 0xda, 0x26, 0xd6, 0xe6, 0x0e, 0x52, 0xc9, 
+    0x59, 0x26, 0x39, 0xcb, 0x24, 0x67, 0x99, 0xe4, 0xac, 0xe2, 0xe2, 0x38, 0x92, 0x53, 0x46, 0xe7, 0x7b, 0x47, 0x39, 0xab, 0x1c, 0x81, 0x7a, 0x14, 0x6a, 0x3f, 0xd4, 0x01, 0xa8, 0x20, 0x73, 0x53, 
+    0xff, 0x5c, 0x03, 0x36, 0xdb, 0x06, 0x36, 0xeb, 0x06, 0x9f, 0x50, 0x5f, 0xe1, 0x75, 0x28, 0xfd, 0x0a, 0xd8, 0xcf, 0x93, 0x14, 0x92, 0x13, 0xb1, 0x2d, 0xf3, 0xee, 0x6c, 0xc8, 0x3c, 0x6f, 0x7d, 
+    0xab, 0xd3, 0xd8, 0x18, 0xf5, 0x2a, 0x4f, 0x2a, 0x5f, 0xa2, 0x27, 0x43, 0xd7, 0x17, 0xe0, 0x56, 0xcc, 0x63, 0xbf, 0x26, 0x1c, 0x72, 0x65, 0x7c, 0xa9, 0xa6, 0x63, 0x42, 0x9f, 0x57, 0xf3, 0x6b, 
+    0x5e, 0x2d, 0x78, 0xfa, 0x2b, 0xdd, 0x93, 0x74, 0x71, 0x7e, 0xed, 0x83, 0x80, 0x90, 0xf2, 0xab, 0x1f, 0x04, 0x7c, 0x29, 0x7a, 0x2e, 0x26, 0xaa, 0x1e, 0x5c, 0x08, 0xe7, 0x9e, 0xeb, 0x9a, 0x37, 
+    0xd3, 0x95, 0xf9, 0x4c, 0x3e, 0x2f, 0xf3, 0x10, 0x87, 0x28, 0x33, 0xaf, 0x94, 0x1f, 0xbc, 0x49, 0x4d, 0x24, 0x5b, 0x67, 0xcd, 0x90, 0x3b, 0x21, 0xee, 0xe0, 0x6c, 0xec, 0x43, 0xe9, 0x9f, 0x48, 
+    0xc7, 0x66, 0x2e, 0x9d, 0x35, 0x59, 0x1d, 0x81, 0x7f, 0x93, 0xa3, 0xeb, 0x01, 0x99, 0xec, 0xe1, 0x4e, 0x1d, 0x98, 0xb5, 0x51, 0x7c, 0x5b, 0x1a, 0x81, 0xe3, 0xb3, 0xfc, 0xda, 0xcb, 0xd2, 0x46, 
+    0xf0, 0x7d, 0xa2, 0x54, 0x9f, 0x99, 0x97, 0x99, 0x2e, 0x6f, 0x14, 0x2d, 0x10, 0x87, 0x42, 0x72, 0x93, 0xb8, 0xa2, 0x74, 0x1a, 0xf4, 0xac, 0xc4, 0xc0, 0x53, 0xe5, 0x15, 0xa5, 0xdd, 0x92, 0x3e, 
+    0x13, 0x65, 0x3c, 0xf8, 0xc1, 0x59, 0x1b, 0x86, 0xf2, 0xe0, 0x13, 0xe8, 0xe0, 0x06, 0x33, 0xee, 0xd6, 0x96, 0xae, 0x2e, 0x35, 0xbe, 0xf3, 0x3e, 0x7c, 0xe7, 0xcd, 0xf0, 0x3e, 0xd7, 0x1b, 0x50, 
+    0x11, 0x69, 0x5a, 0x8f, 0xd2, 0x88, 0xfc, 0x1d, 0x6c, 0xe1, 0x66, 0xb1, 0xaa, 0xb0, 0xbe, 0x13, 0xda, 0x1c, 0xb0, 0x8d, 0x71, 0x7a, 0x84, 0xbe, 0x3c, 0x5c, 0x10, 0xf6, 0x6b, 0x97, 0xaf, 0x79, 
+    0x7d, 0xce, 0x9b, 0x6c, 0xfc, 0x2e, 0xa6, 0xdf, 0x01, 0xed, 0x32, 0xd0, 0xcf, 0x83, 0x93, 0x7e, 0x85, 0xda, 0xb0, 0x48, 0x6d, 0x6a, 0x6a, 0x6c, 0x56, 0xaa, 0x2a, 0x47, 0x97, 0xdd, 0x2e, 0xcd, 
+    0x1c, 0xbd, 0xa8, 0xf6, 0xa1, 0x2a, 0x9a, 0x0d, 0x74, 0x7d, 0x18, 0xc8, 0xaf, 0xfa, 0x0f, 0x79, 0x45, 0x4d, 0x73, 0xe3, 0xc2, 0x18, 0xd5, 0x58, 0x54, 0x35, 0x32, 0xf3, 0xae, 0x19, 0x0d, 0xc3, 
+    0xc0, 0x6a, 0xe3, 0x71, 0xb3, 0xfa, 0x17, 0xb3, 0x6f, 0x31, 0xfb, 0xc7, 0xcd, 0xfe, 0x98, 0xcd, 0x90, 0x9d, 0x37, 0xc3, 0xd7, 0x7b, 0xb9, 0xc3, 0x0f, 0xa9, 0x96, 0x61, 0x8f, 0x82, 0xcf, 0xdc, 
+    0x4f, 0x19, 0x3e, 0xf3, 0x40, 0x94, 0x8f, 0x22, 0xdc, 0x1e, 0x38, 0x8d, 0xbd, 0x90, 0xcf, 0xc1, 0xc3, 0xeb, 0x54, 0x94, 0x71, 0x05, 0xd1, 0x20, 0x1d, 0x99, 0x48, 0x16, 0x84, 0x3b, 0xd4, 0x42, 
+    0x97, 0x91, 0xd7, 0x21, 0x53, 0x9b, 0x72, 0x1e, 0xe4, 0x34, 0x36, 0xc1, 0x47, 0x58, 0x38, 0xe4, 0xc8, 0x14, 0x84, 0x8b, 0xc2, 0x82, 0xc6, 0x07, 0xb9, 0xd3, 0xdf, 0xe8, 0x2e, 0x8e, 0xea, 0x0a, 
+    0x1a, 0xd5, 0xdb, 0xa2, 0xf2, 0x83, 0xdf, 0x87, 0xe9, 0x7e, 0x68, 0x5c, 0x50, 0x5d, 0x37, 0x8d, 0x8c, 0xd3, 0x46, 0x64, 0x18, 0x23, 0xce, 0xb3, 0xd8, 0x30, 0xe6, 0xa7, 0xa3, 0xd8, 0xc8, 0x83, 
+    0x56, 0x98, 0xb3, 0x5b, 0x45, 0x83, 0x05, 0xe1, 0x4d, 0xcc, 0x1e, 0x05, 0xe1, 0xa7, 0x54, 0xbf, 0xd6, 0x1b, 0x38, 0x5a, 0xfa, 0x94, 0x2a, 0xa4, 0xc6, 0xe1, 0xef, 0xce, 0x79, 0x58, 0x6e, 0xea, 
+    0x50, 0xd1, 0x01, 0x2b, 0x6e, 0xc8, 0x5d, 0x54, 0xde, 0x1b, 0xd8, 0x28, 0x1e, 0x54, 0x2f, 0x9e, 0x5b, 0x0a, 0xf8, 0xa0, 0x4a, 0xc7, 0x5f, 0x1f, 0xa6, 0xe3, 0xe9, 0x2a, 0x75, 0x1d, 0xfc, 0xb7, 
+    0x01, 0xa5, 0xaf, 0x22, 0x82, 0x82, 0xc8, 0x62, 0x40, 0x4f, 0x30, 0xb4, 0x05, 0x50, 0x3e, 0x43, 0xc7, 0x01, 0x5d, 0xcd, 0xd0, 0xd7, 0x80, 0xaa, 0x19, 0xca, 0x07, 0x1b, 0x2d, 0x66, 0x68, 0x2c, 
+    0xa0, 0x04, 0x11, 0xc0, 0x5e, 0x43, 0x11, 0x73, 0x7b, 0x17, 0x3a, 0x40, 0xf3, 0x70, 0x51, 0xb8, 0x97, 0xaf, 0x69, 0x37, 0x7c, 0xbf, 0x0c, 0xf7, 0xe5, 0xbd, 0x91, 0x77, 0x30, 0x0f, 0x72, 0xad, 
+    0x46, 0xad, 0xa3, 0xcd, 0xae, 0x07, 0x49, 0x50, 0xcb, 0xa8, 0x3a, 0xdc, 0xac, 0xba, 0x7e, 0x46, 0x75, 0x42, 0x5e, 0x39, 0xa3, 0xd2, 0xfb, 0xe2, 0x8c, 0x9a, 0xcf, 0x30, 0xcd, 0x34, 0xa8, 0xc7, 
+    0x90, 0x50, 0x4a, 0x65, 0x7e, 0x8d, 0x27, 0xc3, 0xbb, 0x51, 0xda, 0x42, 0xc0, 0xb3, 0x47, 0x84, 0xa4, 0x6d, 0xbe, 0x90, 0x42, 0x90, 0x73, 0x06, 0x83, 0x90, 0x79, 0xe7, 0x5f, 0x8f, 0x85, 0xde, 
+    0xf3, 0xe7, 0x7c, 0xa9, 0xa5, 0xb9, 0x0d, 0x98, 0xde, 0xbb, 0x6d, 0x07, 0x1b, 0x38, 0xd8, 0x5f, 0xdc, 0xab, 0xd1, 0xfa, 0xcd, 0x64, 0x5d, 0xb7, 0x01, 0xb5, 0x99, 0x18, 0x91, 0x75, 0xb0, 0x76, 
+    0xfc, 0x9a, 0x3d, 0x0e, 0xd9, 0x15, 0x50, 0x1f, 0x43, 0x6f, 0x00, 0x3a, 0xce, 0x10, 0x01, 0xd4, 0xb1, 0xe5, 0x12, 0x72, 0xc1, 0x7b, 0xc1, 0x97, 0x9a, 0x52, 0xc6, 0x6e, 0x28, 0x78, 0x01, 0x54, 
+    0x35, 0x37, 0x37, 0x36, 0xeb, 0x46, 0x4c, 0x8e, 0x88, 0xc7, 0xaf, 0x1c, 0x11, 0x2f, 0x83, 0xba, 0xe0, 0xda, 0x11, 0xf1, 0xf9, 0x40, 0x17, 0x5e, 0x37, 0x22, 0xde, 0x06, 0x38, 0x02, 0xf4, 0x05, 
+    0xa0, 0x9d, 0xd7, 0x22, 0xf2, 0x30, 0xdc, 0x93, 0x65, 0xcc, 0x6a, 0x04, 0x50, 0x2b, 0x43, 0xcb, 0x00, 0xfd, 0x94, 0xa1, 0xe5, 0x80, 0x1e, 0x65, 0x28, 0x01, 0xe8, 0x71, 0x86, 0xda, 0x01, 0x4d, 
+    0x66, 0x68, 0x1d, 0xa0, 0x25, 0x0c, 0x75, 0x00, 0x9a, 0xc6, 0xd0, 0xb3, 0x80, 0x6e, 0x61, 0xb6, 0x2f, 0x08, 0xd3, 0x5b, 0x08, 0x69, 0x83, 0xc1, 0x1c, 0x96, 0xff, 0xf2, 0xe0, 0xed, 0xb0, 0x65, 
+    0x36, 0xbd, 0xdb, 0x38, 0x32, 0x1c, 0xff, 0x48, 0x16, 0x30, 0xd2, 0x2c, 0xe4, 0x2a, 0x99, 0x1f, 0xec, 0x9e, 0x6d, 0xf8, 0xfc, 0x02, 0x8c, 0xfd, 0x19, 0x1b, 0x2b, 0xd7, 0xf4, 0xf2, 0x88, 0xdc, 
+    0x0c, 0xf7, 0x3a, 0x4f, 0xf2, 0x9f, 0x47, 0x69, 0x3b, 0xec, 0x73, 0xd8, 0x03, 0x94, 0xf7, 0x73, 0xc6, 0x9b, 0xfe, 0xa2, 0xc1, 0x8b, 0x9a, 0xf7, 0xfa, 0xd8, 0x64, 0x2d, 0xa6, 0x98, 0xfa, 0xf1, 
+    0x91, 0x88, 0x2f, 0x65, 0xe0, 0x36, 0xed, 0x9e, 0x38, 0x95, 0xde, 0x27, 0xaf, 0xf2, 0xe9, 0xfa, 0x21, 0xb1, 0x85, 0x3c, 0x29, 0xfa, 0xb5, 0xa6, 0xc8, 0x0c, 0x79, 0x5b, 0xb9, 0x71, 0x03, 0x2d, 
+    0x91, 0x46, 0x3f, 0xb6, 0x52, 0x14, 0x92, 0x7f, 0x2c, 0xff, 0xa4, 0xbc, 0x62, 0x56, 0x77, 0xa4, 0x5b, 0x72, 0xc3, 0xea, 0x5c, 0x84, 0xeb, 0xe5, 0x33, 0x3b, 0x23, 0x42, 0xea, 0xe9, 0xa7, 0xd1, 
+    0x00, 0x22, 0xe8, 0x6d, 0x41, 0x03, 0xf4, 0x36, 0x1a, 0x68, 0xa5, 0xb7, 0x25, 0x59, 0x1c, 0xa9, 0x8f, 0x08, 0x5a, 0x34, 0xce, 0x1d, 0x17, 0x7a, 0x3f, 0x3d, 0xe7, 0xc2, 0x3b, 0x22, 0x67, 0x24, 
+    0x43, 0x17, 0x4e, 0x2e, 0x7d, 0x5b, 0x81, 0x86, 0x9b, 0xdc, 0x13, 0xb7, 0x90, 0x8e, 0xc8, 0xc7, 0x20, 0xb9, 0xe9, 0x0f, 0xdc, 0x29, 0x63, 0x9e, 0x3f, 0x13, 0x63, 0x74, 0x0e, 0x89, 0xc6, 0xbb, 
+    0x61, 0x7e, 0xc8, 0x3b, 0x04, 0x4e, 0xfa, 0x80, 0x15, 0x64, 0x1c, 0xd1, 0x41, 0x36, 0x49, 0xe6, 0x88, 0x07, 0xa4, 0xd3, 0x64, 0x9d, 0xf8, 0x52, 0x8d, 0x58, 0x27, 0x11, 0x8c, 0x06, 0x26, 0xc9, 
+    0x2f, 0x4b, 0xd4, 0x6e, 0x13, 0xe5, 0x25, 0x52, 0x2d, 0x7e, 0x18, 0xea, 0x44, 0x19, 0xdb, 0x75, 0xfd, 0xfe, 0xc8, 0xbc, 0xf5, 0xff, 0x08, 0xac, 0x0e, 0x73, 0x64, 0xf9, 0x1d, 0x48, 0xa3, 0xb2, 
+    0x43, 0xe2, 0xe8, 0xc7, 0x9e, 0x14, 0x87, 0x6c, 0x41, 0x35, 0xff, 0x49, 0xea, 0x23, 0x68, 0xa0, 0x02, 0x57, 0x9a, 0xbc, 0xc5, 0x30, 0x8f, 0x90, 0xac, 0x60, 0xab, 0xbf, 0x00, 0xab, 0x5f, 0x11, 
+    0xae, 0xf1, 0xd1, 0xf3, 0x00, 0x96, 0x3a, 0xe1, 0x85, 0x58, 0xf6, 0x6a, 0x23, 0xd9, 0xf9, 0x36, 0xce, 0xf8, 0x2e, 0x73, 0x94, 0x57, 0xdb, 0x61, 0x22, 0x9a, 0x17, 0x72, 0x32, 0xb4, 0xf7, 0xfb, 
+    0xf8, 0x2e, 0xd6, 0xbe, 0x2f, 0xd2, 0x5b, 0xe3, 0x4b, 0xc8, 0x25, 0xf4, 0x3e, 0xa2, 0x6f, 0xb6, 0x3d, 0x9d, 0x28, 0xfd, 0x1a, 0xe4, 0x4d, 0xf3, 0x55, 0x38, 0xdb, 0xc6, 0x97, 0x4b, 0x33, 0x1c, 
+    0x4e, 0x2e, 0x0a, 0x57, 0x72, 0x45, 0x22, 0xba, 0xd4, 0x3d, 0xfd, 0xbf, 0xbf, 0x12, 0x4b, 0x02, 0x25, 0x81, 0x67, 0x63, 0x8e, 0x56, 0xae, 0x7a, 0x5e, 0x61, 0x99, 0xf4, 0xa1, 0x58, 0x26, 0x7d, 
+    0x04, 0xf5, 0x33, 0xa8, 0x67, 0xa1, 0x5e, 0x10, 0x4b, 0x02, 0x28, 0xd6, 0x16, 0xd3, 0x75, 0x07, 0xb1, 0xec, 0x85, 0xbb, 0x1d, 0x5e, 0x83, 0x6d, 0x3d, 0x41, 0xe5, 0x58, 0xfc, 0x87, 0x6f, 0x48, 
+    0x2b, 0x31, 0xfc, 0xdf, 0x01, 0x31, 0x42, 0xef, 0x47, 0xf2, 0x0c, 0x4a, 0x8f, 0x87, 0xf5, 0xe4, 0xc2, 0xeb, 0x7b, 0x4c, 0xb0, 0x5c, 0x41, 0xda, 0x35, 0xf1, 0x1d, 0x4a, 0x9f, 0x92, 0xaf, 0xce, 
+    0x57, 0xc7, 0xaa, 0x0d, 0xea, 0x6a, 0x35, 0xad, 0x7a, 0xe2, 0xb3, 0xe2, 0xb7, 0xc5, 0xe7, 0xc4, 0xff, 0x16, 0xdf, 0x1b, 0xe7, 0xc9, 0x72, 0x62, 0xec, 0x16, 0x3c, 0xf4, 0x0c, 0x7d, 0x8d, 0x9e, 
+    0x88, 0x1b, 0x3f, 0xb8, 0x4b, 0x4d, 0x19, 0xcd, 0x67, 0xdf, 0x95, 0xd0, 0xf7, 0xba, 0x9b, 0xbd, 0xe0, 0xc7, 0xdf, 0x30, 0xe1, 0x46, 0xfa, 0x6a, 0x5f, 0xc6, 0xf3, 0x9b, 0xe4, 0xe5, 0xb4, 0x49, 
+    0xd0, 0xdd, 0x07, 0xc4, 0x0d, 0x3c, 0xdf, 0x21, 0x6f, 0xe2, 0xf9, 0x75, 0xf2, 0x56, 0xde, 0xbe, 0x46, 0xa6, 0x06, 0xd9, 0x41, 0x59, 0xfb, 0x28, 0xeb, 0x23, 0x9e, 0xdf, 0x20, 0x7f, 0x41, 0xbb, 
+    0xcc, 0x48, 0xc4, 0xc6, 0x77, 0xca, 0xb7, 0xd8, 0xa1, 0x99, 0x61, 0xe7, 0x9f, 0x95, 0x4b, 0x69, 0x73, 0x99, 0xe1, 0xee, 0x74, 0xf0, 0xab, 0xa4, 0xc5, 0x0e, 0x0b, 0xf7, 0xa8, 0xc3, 0x62, 0x59, 
+    0xe1, 0xe0, 0x53, 0x52, 0x87, 0x83, 0xe7, 0xa2, 0x3b, 0x1d, 0xce, 0x9d, 0xd8, 0x57, 0x17, 0x91, 0xfc, 0xb1, 0x29, 0x4e, 0xf8, 0x26, 0x47, 0x3e, 0x72, 0x5a, 0x2b, 0x6d, 0x0d, 0xb6, 0x1b, 0x5d, 
+    0xb9, 0x47, 0x6d, 0xc7, 0x6c, 0x47, 0x79, 0x9b, 0xfd, 0x5e, 0xfb, 0x7b, 0x96, 0xb9, 0xd8, 0xc5, 0xbf, 0xc4, 0x17, 0xb8, 0xf9, 0x57, 0xe4, 0xa5, 0x6e, 0xfd, 0x7f, 0x77, 0x41, 0x52, 0xf6, 0xc7, 
+    0x84, 0xba, 0x2f, 0x45, 0xa1, 0xce, 0x16, 0xf0, 0xd5, 0x25, 0xa2, 0x9b, 0x80, 0x2b, 0x44, 0x21, 0x29, 0xd6, 0x76, 0x8a, 0x9d, 0x80, 0x3b, 0xc5, 0x5a, 0xcb, 0x26, 0xf1, 0x12, 0xa7, 0x56, 0xdc, 
+    0x22, 0xbe, 0x24, 0xbe, 0x0a, 0xdc, 0xdd, 0xc0, 0xf5, 0xc7, 0xec, 0xc0, 0xcf, 0x0f, 0x3e, 0x17, 0xa4, 0x75, 0x2a, 0xe9, 0x17, 0x7d, 0x75, 0xf0, 0xa4, 0xad, 0x70, 0xe3, 0x95, 0x85, 0x9f, 0x07, 
+    0x7e, 0x6b, 0xdb, 0x86, 0x51, 0x6c, 0xaa, 0x45, 0x88, 0x96, 0x12, 0x54, 0xbd, 0xb6, 0x70, 0x89, 0x64, 0x21, 0x09, 0xd8, 0x11, 0x7c, 0x31, 0x6a, 0x21, 0x42, 0x1d, 0x7a, 0x90, 0x6a, 0x76, 0x15, 
+    0x0a, 0x75, 0x9f, 0xc3, 0x38, 0x2b, 0xb6, 0x11, 0xae, 0x7a, 0x43, 0x61, 0x5b, 0x8c, 0x1e, 0x0f, 0x7f, 0x6c, 0xb7, 0xe8, 0x8f, 0xe5, 0xc3, 0xbc, 0x42, 0x1d, 0xfd, 0xc6, 0xfe, 0x42, 0x6f, 0xec, 
+    0xb9, 0x20, 0xad, 0xc6, 0x17, 0xfc, 0xb1, 0x9d, 0x98, 0xae, 0xdb, 0x07, 0xeb, 0xee, 0x79, 0x24, 0x47, 0x87, 0x4f, 0xf9, 0xea, 0x50, 0x6c, 0x68, 0x9a, 0x17, 0xc1, 0x18, 0xeb, 0xa5, 0x42, 0xd2, 
+    0x6f, 0x7e, 0xfc, 0x48, 0xe1, 0x56, 0xc9, 0x1b, 0xa3, 0x9f, 0x1f, 0xd7, 0xea, 0x26, 0xb2, 0xe5, 0x3a, 0x40, 0x5b, 0xc4, 0xfc, 0xe0, 0x70, 0x7c, 0xba, 0x90, 0x27, 0x25, 0x5c, 0x22, 0x7a, 0x5c, 
+    0x1a, 0x8e, 0x51, 0x11, 0xfd, 0x2c, 0xdc, 0x0f, 0xd5, 0x5c, 0xd1, 0x6e, 0x11, 0x01, 0x36, 0x16, 0x61, 0x6c, 0xcf, 0x57, 0xe7, 0xc6, 0x5f, 0xc2, 0xb6, 0xbe, 0x62, 0xdb, 0xca, 0x0f, 0x1a, 0xd5, 
+    0x57, 0xe7, 0x21, 0x25, 0xb8, 0x5f, 0x44, 0x76, 0x5f, 0x1d, 0xf7, 0x40, 0xbf, 0x38, 0x55, 0x3c, 0x60, 0xe9, 0x0b, 0xbc, 0x27, 0xdd, 0x8d, 0x6d, 0x76, 0x63, 0xd6, 0xb9, 0xff, 0x9e, 0x75, 0x0e, 
+    0xcc, 0x3a, 0x1c, 0xcf, 0x2e, 0x12, 0xa2, 0x36, 0x32, 0x11, 0x5f, 0x5d, 0x84, 0x62, 0x36, 0xd8, 0xa8, 0xb1, 0xdd, 0xfc, 0xe0, 0xd0, 0x76, 0xe1, 0x15, 0x51, 0x31, 0xb9, 0xe8, 0xd2, 0x76, 0xa9, 
+    0xe9, 0x2f, 0xdf, 0xee, 0xcd, 0x76, 0x63, 0xaf, 0x97, 0x56, 0x60, 0xc5, 0x0f, 0x7b, 0x74, 0xa1, 0x8e, 0xab, 0x2e, 0x28, 0xa2, 0xdb, 0xa6, 0x2c, 0x5f, 0x1d, 0x6c, 0x0b, 0x7b, 0x63, 0x6e, 0xd2, 
+    0x8d, 0xe9, 0xf2, 0xee, 0xb2, 0x7f, 0x2f, 0x1a, 0xbc, 0x7e, 0x71, 0xee, 0x65, 0x4b, 0x3d, 0x14, 0x70, 0xcb, 0x77, 0xe3, 0x7b, 0xed, 0xd4, 0x2f, 0x5c, 0x75, 0x25, 0x8c, 0x1f, 0x0f, 0xa6, 0x81, 
+    0x27, 0x5c, 0xf5, 0x03, 0x80, 0x27, 0x00, 0xe6, 0x01, 0x37, 0x01, 0x9e, 0x08, 0x18, 0xc5, 0x26, 0x11, 0x43, 0x73, 0x09, 0x70, 0xa6, 0x98, 0x9a, 0xbf, 0x06, 0x5c, 0x62, 0x6a, 0x3e, 0x0e, 0xf8, 
+    0x66, 0xa6, 0x39, 0x15, 0x5a, 0x07, 0xe1, 0xea, 0xbd, 0x31, 0x54, 0x8b, 0x48, 0x5b, 0xc5, 0x72, 0x79, 0xbe, 0x7d, 0xb9, 0xbc, 0xc8, 0xce, 0x91, 0x55, 0x50, 0xdb, 0xed, 0xf0, 0x17, 0x0f, 0x6a, 
+    0xbb, 0xdd, 0x0a, 0xd4, 0x0a, 0xd4, 0x0e, 0xd4, 0x0e, 0x34, 0x17, 0xc6, 0x6c, 0x2f, 0x2a, 0x09, 0x38, 0x5b, 0x51, 0x35, 0xa5, 0x0e, 0x72, 0x2f, 0x4e, 0x44, 0x37, 0xc3, 0x0a, 0x3d, 0xc4, 0x29, 
+    0xee, 0x29, 0xa2, 0x73, 0xba, 0xf1, 0xee, 0xa2, 0xcd, 0xf2, 0x7e, 0xbb, 0x81, 0xf7, 0x17, 0x7d, 0x48, 0x1c, 0xbf, 0xca, 0xf5, 0x81, 0x62, 0x97, 0xdd, 0x09, 0xe1, 0x7e, 0xa8, 0x88, 0x86, 0xb6, 
+    0x0b, 0x50, 0x8a, 0xa9, 0xdf, 0x12, 0x68, 0x8b, 0x5d, 0xfe, 0x9f, 0xf5, 0xf2, 0x9c, 0x33, 0xd8, 0xf2, 0x79, 0xcb, 0x0f, 0x73, 0xce, 0x37, 0xf1, 0xc3, 0x21, 0x23, 0x6f, 0x8c, 0xc2, 0x88, 0x7c, 
+    0xc1, 0xb2, 0xc6, 0x28, 0xe2, 0xd7, 0xce, 0xb7, 0xf8, 0x52, 0xdc, 0x5b, 0x42, 0xd2, 0xaf, 0x39, 0xf0, 0xb7, 0xf0, 0x12, 0x80, 0x9c, 0xa2, 0xd9, 0x98, 0xde, 0x18, 0x78, 0x09, 0x64, 0x4b, 0xb6, 
+    0x64, 0x4b, 0xb6, 0x64, 0x4b, 0xb6, 0x64, 0x4b, 0xb6, 0x64, 0x4b, 0xb6, 0x64, 0x4b, 0xb6, 0x64, 0x4b, 0xb6, 0x64, 0xcb, 0xff, 0x7b, 0xf9, 0x17, 0x7c, 0x8e, 0x31, 0x18, 
+};
+#endif
+
 
 void configure_lvds(void)
 {
-    EVE_memWrite32(REG_SO_EN, 0UL);
-    EVE_memWrite32(REG_RE_ACTIVE, 0UL);
-    EVE_memWrite32(REG_LVDSTX_EN, 0UL);
+    EVE_memWrite32(REG_SO_EN, UINT32_C(0));
+    EVE_memWrite32(REG_RE_ACTIVE, UINT32_C(0));
+    EVE_memWrite32(REG_LVDSTX_EN, UINT32_C(0));
 
     /* place the swapchain-buffers at the end of the memory */
     /* 1920 x 1200 as assumed maximum resolution */
@@ -977,22 +851,26 @@ void configure_lvds(void)
 
     EVE_memWrite32(REG_SO_SOURCE, EVE_SWAPCHAIN_0);
     EVE_memWrite32(REG_SO_FORMAT, EVE_RGB8);
-    EVE_memWrite32(REG_SO_MODE, EVE_SO_MODE_2); /* 2-pixel per clock for single LVDS channel mode */
+    EVE_memWrite32(REG_SO_MODE, EVE_LVDS_SO_MODE);
 
     EVE_memWrite32(REG_RE_DEST, EVE_SWAPCHAIN_0);
     EVE_memWrite32(REG_RE_FORMAT, EVE_RGB8);
     EVE_memWrite32(REG_RE_W, EVE_HSIZE); /* CMD_RENDERTARGET: Render target width in pixels and must be a multiple of 16. */
     EVE_memWrite32(REG_RE_H, EVE_VSIZE); /* CMD_RENDERTARGET: Render target height in pixels. w × h must be a multiple of 128 */
-    EVE_memWrite32(REG_RE_DITHER, 0UL);
+    EVE_memWrite32(REG_RE_DITHER, UINT32_C(0));
     EVE_memWrite32(REG_RE_ACTIVE, 1UL);
 
-    EVE_memWrite32(REG_LVDSTX_CTRL_CH0, 2); /* VESA/Format 2 Mapping for 24-bit, Single Pixel per Clock */
+    EVE_memWrite32(REG_LVDSTX_CTRL_CH0, EVE_LVDS_MODE); /* set mode defined by display configuration */
+    EVE_memWrite32(REG_LVDSTX_CTRL_CH1, EVE_LVDS_MODE); /* set mode defined by display configuration */
 
-    /* target: 51.2MHz LVDSTX clock for 1024x600 panel*/
-    //EVE_memRead32(REG_LVDSTX_PLLCFG);
-    EVE_memWrite32(REG_LVDSTX_PLLCFG, setlvdspll_value(PLL_LOCK_PERIOD, 1u, 5u)); /* scanclk_2x -> 576MHz / 6 = 96MHz -> LVDSTX = 48MHz */
+    EVE_memWrite32(REG_LVDSTX_PLLCFG, setlvdspll_value(PLL_LOCK_PERIOD, EVE_LVDS_PLL_CKS, EVE_LVDS_PLL_DIV));
 
+#if defined (EVE_LVDS_SINGLE_CHANNEL)
     EVE_memWrite32(REG_LVDSTX_EN, LVDS_CH0_EN);
+#else
+    EVE_memWrite32(REG_LVDSTX_EN, LVDS_CH0_EN | LVDS_CH1_EN);
+#endif
+
     DELAY_MS(10);
 
     EVE_memWrite32(REG_SO_EN, 1UL); /* enable scanout */
@@ -1057,7 +935,7 @@ void EVE_write_display_parameters(void)
     EVE_memWrite32(REG_DISP, 1UL); /* enable backlight */
 
     /* no need to configure Touch, auto-discovery and continous mode is reset default */
-    //EVE_memWrite32(REG_TOUCH_CONFIG, 0UL); /* trigger auto-discovery for touch controller with 400kHz I2C */
+    //EVE_memWrite32(REG_TOUCH_CONFIG, UINT32_C(0)); /* trigger auto-discovery for touch controller with 400kHz I2C */
     //EVE_memWrite32(REG_TOUCH_MODE, EVE_TMODE_CONTINUOUS); /* enable touch */
     // there is no REG_TOUCH_RZTHRESH in EVE5
 
@@ -1078,7 +956,6 @@ void EVE_write_display_parameters(void)
  * @note - EVE_BACKLIGHT_FREQ - configure the backlight frequency, default is not writing it which results in 250Hz.
  * @note - EVE_BACKLIGHT_PWM - configure the backlight pwm, defaults to 0x20 / 25%.
  * @note - EVE_SOFT_RESET - if defined the host command RST_PULSE is send
- * @note - EVE_CUSTOM_MS_DELAY - is used for an extra DELAY_MS() as option if the panel in use requires more time to start
  */
 uint8_t EVE_init(void)
 {
@@ -1105,14 +982,13 @@ uint8_t EVE_init(void)
 
     DELAY_MS(60U); /* give EVE a moment of silence to power up, a BT820 answers about 34ms after ACTIVE and booting takes about 27ms */
 
-    /* optional extra startup delay in milliseconds if there are timing issues with the panel in use */
-#if defined (EVE_CUSTOM_MS_DELAY)
-    DELAY_MS(EVE_CUSTOM_MS_DELAY);
-#endif
-
-ret = wait_boot();
+    ret = wait_boot();
     if (E_OK == ret)
     {
+#if defined (EVE_PATCH_TOUCH)
+        EVE_cmd_loadpatch(0, touch_patch, sizeof(touch_patch));
+#endif
+
 #if defined (EVE_BACKLIGHT_FREQ)
         EVE_memWrite32(REG_PWM_HZ, EVE_BACKLIGHT_FREQ); /* set backlight frequency to configured value */
 #endif
@@ -1179,20 +1055,24 @@ void EVE_start_cmd_burst(void)
  */
 void EVE_cmd_arc(const int16_t xc0, const int16_t yc0, const uint16_t rad0, const uint16_t rad1, const uint16_t angle0, const uint16_t angle1)
 {
+    const uint32_t param0 = i16_i16_to_u32(xc0, yc0);
+    const uint32_t param1 = u16_u16_to_u32(rad0, rad1);
+    const uint32_t param2 = u16_u16_to_u32(angle0, angle1);
+
     if (0U == g_cmd_burst)
     {
         eve_begin_cmd(CMD_ARC);
-        spi_transmit_32(i16_i16_to_u32(xc0, yc0));
-        spi_transmit_32(u16_u16_to_u32(rad0, rad1));
-        spi_transmit_32(u16_u16_to_u32(angle0, angle1));
+        spi_transmit_32(param0);
+        spi_transmit_32(param1);
+        spi_transmit_32(param2);
         EVE_cs_clear();
     }
     else
     {
         spi_transmit_burst(CMD_ARC);
-        spi_transmit_burst(i16_i16_to_u32(xc0, yc0));
-        spi_transmit_burst(u16_u16_to_u32(rad0, rad1));
-        spi_transmit_burst(u16_u16_to_u32(angle0, angle1));
+        spi_transmit_burst(param0);
+        spi_transmit_burst(param1);
+        spi_transmit_burst(param2);
     }
 }
 
@@ -1212,12 +1092,15 @@ void EVE_cmd_arc_burst(const int16_t xc0, const int16_t yc0, const uint16_t rad0
  */
 void EVE_cmd_cgradient(const uint32_t shape, const int16_t xc0, const int16_t yc0, const uint16_t wid, const uint16_t hgt, const uint32_t rgb0, const uint32_t rgb1)
 {
+    const uint32_t param0 = i16_i16_to_u32(xc0, yc0);
+    const uint32_t param1 = u16_u16_to_u32(wid, hgt);
+
     if (0U == g_cmd_burst)
     {
         eve_begin_cmd(CMD_CGRADIENT);
         spi_transmit_32(shape);
-        spi_transmit_32(i16_i16_to_u32(xc0, yc0));
-        spi_transmit_32(u16_u16_to_u32(wid, hgt));
+        spi_transmit_32(param0);
+        spi_transmit_32(param1);
         spi_transmit_32(rgb0);
         spi_transmit_32(rgb1);
         EVE_cs_clear();
@@ -1226,8 +1109,8 @@ void EVE_cmd_cgradient(const uint32_t shape, const int16_t xc0, const int16_t yc
     {
         spi_transmit_burst(CMD_CGRADIENT);
         spi_transmit_burst(shape);
-        spi_transmit_burst(i16_i16_to_u32(xc0, yc0));
-        spi_transmit_burst(i16_i16_to_u32(wid, hgt));
+        spi_transmit_burst(param0);
+        spi_transmit_burst(param1);
         spi_transmit_burst(rgb0);
         spi_transmit_burst(rgb1);
     }
@@ -1241,7 +1124,7 @@ void EVE_cmd_cgradient_burst(const uint32_t shape, const int16_t xc0, const int1
     spi_transmit_burst(CMD_CGRADIENT);
     spi_transmit_burst(shape);
     spi_transmit_burst(i16_i16_to_u32(xc0, yc0));
-    spi_transmit_burst(i16_i16_to_u32(wid, hgt));
+    spi_transmit_burst(u16_u16_to_u32(wid, hgt));
     spi_transmit_burst(rgb0);
     spi_transmit_burst(rgb1);
 }
@@ -1302,18 +1185,21 @@ void EVE_cmd_fence_burst(void)
  */
 void EVE_cmd_glow(const int16_t xc0, const int16_t yc0, const uint16_t wid, const uint16_t hgt)
 {
+    const uint32_t param0 = i16_i16_to_u32(xc0, yc0);
+    const uint32_t param1 = u16_u16_to_u32(wid, hgt);
+
     if (0U == g_cmd_burst)
     {
         eve_begin_cmd(CMD_GLOW);
-        spi_transmit_32(i16_i16_to_u32(xc0, yc0));
-        spi_transmit_32(u16_u16_to_u32(wid, hgt));
+        spi_transmit_32(param0);
+        spi_transmit_32(param1);
         EVE_cs_clear();
     }
     else
     {
         spi_transmit_burst(CMD_GLOW);
-        spi_transmit_burst(i16_i16_to_u32(xc0, yc0));
-        spi_transmit_burst(i16_i16_to_u32(wid, hgt));
+        spi_transmit_burst(param0);
+        spi_transmit_burst(param1);
     }
 }
 
@@ -1324,7 +1210,7 @@ void EVE_cmd_glow_burst(const int16_t xc0, const int16_t yc0, const uint16_t wid
 {
     spi_transmit_burst(CMD_GLOW);
     spi_transmit_burst(i16_i16_to_u32(xc0, yc0));
-    spi_transmit_burst(i16_i16_to_u32(wid, hgt));
+    spi_transmit_burst(u16_u16_to_u32(wid, hgt));
 }
 
 /**
@@ -1620,596 +1506,5 @@ void EVE_cmd_watchdog_burst(const uint32_t init_val)
     spi_transmit_burst(CMD_WATCHDOG);
     spi_transmit_burst(init_val);
 }
-
-/* the following commands require a patch loaded with CMD_LOADPATCH */
-
-/**
- * @brief Start a Region section.
- */
-void EVE_cmd_region(void)
-{
-    if (0U == g_cmd_burst)
-    {
-        eve_begin_cmd(CMD_REGION);
-        EVE_cs_clear();
-    }
-    else
-    {
-        spi_transmit_burst(CMD_REGION);
-    }
-}
-
-/**
- * @brief Start a Region section, only works in burst-mode.
- */
-void EVE_cmd_region_burst(void)
-{
-    spi_transmit_burst(CMD_REGION);
-}
-
-/**
- * @brief Stop a Region section.
- */
-void EVE_cmd_endregion(const int16_t xco, const int16_t yco, const uint16_t wid, const uint16_t hgt)
-{
-    if (0U == g_cmd_burst)
-    {
-        eve_begin_cmd(CMD_ENDREGION);
-        spi_transmit_32(i16_i16_to_u32(xco, yco));
-        spi_transmit_32(u16_u16_to_u32(wid, hgt));
-        EVE_cs_clear();
-    }
-    else
-    {
-        spi_transmit_burst(CMD_ENDREGION);
-        spi_transmit_burst(i16_i16_to_u32(xco, yco));
-        spi_transmit_burst(u16_u16_to_u32(wid, hgt));
-    }
-}
-
-/**
- * @brief Stop a Region section, only works in burst-mode.
- */
-void EVE_cmd_endregion_burst(const int16_t xco, const int16_t yco, const uint16_t wid, const uint16_t hgt)
-{
-    spi_transmit_burst(CMD_ENDREGION);
-    spi_transmit_burst(i16_i16_to_u32(xco, yco));
-    spi_transmit_burst(u16_u16_to_u32(wid, hgt));
-}
-
-/**
- * @brief Draw scaled text.
- */
-void EVE_cmd_textscale(const int16_t xco, const int16_t yco, const uint16_t font, const uint16_t options, const uint32_t scale, const char * const p_text)
-{
-    if (0U == g_cmd_burst)
-    {
-        eve_begin_cmd(CMD_TEXTSCALE);
-        spi_transmit_32(i16_i16_to_u32(xco, yco));
-        spi_transmit_32(u16_u16_to_u32(font, options));
-        spi_transmit_32(scale);
-        private_string_write(p_text);
-        EVE_cs_clear();
-    }
-    else
-    {
-        spi_transmit_burst(CMD_TEXTSCALE);
-        spi_transmit_burst(i16_i16_to_u32(xco, yco));
-        spi_transmit_burst(u16_u16_to_u32(font, options));
-        spi_transmit_burst(scale);
-        private_string_write_burst(p_text);
-    }
-}
-
-/**
- * @brief SDraw scaled text, only works in burst-mode.
- */
-void EVE_cmd_textscale_burst(const int16_t xco, const int16_t yco, const uint16_t font, const uint16_t options, const uint32_t scale, const char * const p_text)
-{
-    spi_transmit_burst(CMD_TEXTSCALE);
-    spi_transmit_burst(i16_i16_to_u32(xco, yco));
-    spi_transmit_burst(u16_u16_to_u32(font, options));
-    spi_transmit_burst(scale);
-    private_string_write_burst(p_text);
-}
-
-/**
- * @brief Draw text at an angle.
- */
-void EVE_cmd_textangle(const int16_t xco, const int16_t yco, const uint16_t font, const uint16_t options, const uint32_t angle, const char * const p_text)
-{
-if (0U == g_cmd_burst)
-    {
-        eve_begin_cmd(CMD_TEXTANGLE);
-        spi_transmit_32(i16_i16_to_u32(xco, yco));
-        spi_transmit_32(u16_u16_to_u32(font, options));
-        spi_transmit_32(angle);
-        private_string_write(p_text);
-        EVE_cs_clear();
-    }
-    else
-    {
-        spi_transmit_burst(CMD_TEXTANGLE);
-        spi_transmit_burst(i16_i16_to_u32(xco, yco));
-        spi_transmit_burst(u16_u16_to_u32(font, options));
-        spi_transmit_burst(angle);
-        private_string_write_burst(p_text);
-    }
-}
-
-/**
- * @brief Draw text at an angle, only works in burst-mode.
- */
-void EVE_cmd_textangle_burst(const int16_t xco, const int16_t yco, const uint16_t font, const uint16_t options, const uint32_t angle, const char * const p_text)
-{
-    spi_transmit_burst(CMD_TEXTANGLE);
-    spi_transmit_burst(i16_i16_to_u32(xco, yco));
-    spi_transmit_burst(u16_u16_to_u32(font, options));
-    spi_transmit_burst(angle);
-    private_string_write_burst(p_text);
-}
-
-/**
- * @brief Draw text within a box and scroll the text smoothly.
- */
-void EVE_cmd_textticker(const int16_t xco, const int16_t yco, const uint16_t wid, const uint16_t hgt, const uint16_t font, const uint16_t options, const uint32_t offset, const char * const p_text)
-{
-    if (0U == g_cmd_burst)
-    {
-        eve_begin_cmd(CMD_TEXTTICKER);
-        spi_transmit_32(i16_i16_to_u32(xco, yco));
-        spi_transmit_32(u16_u16_to_u32(wid, hgt));
-        spi_transmit_32(u16_u16_to_u32(font, options));
-        spi_transmit_32(offset);
-        private_string_write(p_text);
-        EVE_cs_clear();
-    }
-    else
-    {
-        spi_transmit_burst(CMD_TEXTTICKER);
-        spi_transmit_burst(i16_i16_to_u32(xco, yco));
-        spi_transmit_burst(u16_u16_to_u32(wid, hgt));
-        spi_transmit_burst(u16_u16_to_u32(font, options));
-        spi_transmit_burst(offset);
-        private_string_write_burst(p_text);
-    }
-}
-
-/**
- * @brief Draw text within a box and scroll the text smoothly, only works in burst-mode.
- */
-void EVE_cmd_textticker_burst(const int16_t xco, const int16_t yco, const uint16_t wid, const uint16_t hgt, const uint16_t font, const uint16_t options, const uint32_t offset, const char * const p_text)
-{
-    spi_transmit_burst(CMD_TEXTTICKER);
-    spi_transmit_burst(i16_i16_to_u32(xco, yco));
-    spi_transmit_burst(u16_u16_to_u32(wid, hgt));
-    spi_transmit_burst(u16_u16_to_u32(font, options));
-    spi_transmit_burst(offset);
-    private_string_write_burst(p_text);
-}
-
-
-/**
- * @brief Draw a seven segment display for decimal numbers from 0 to 9.
- */
-void EVE_cmd_sevenseg(const int16_t xc0, const int16_t yc0, const uint16_t size, const uint16_t number)
-{
-    if (0U == g_cmd_burst)
-    {
-        eve_begin_cmd(CMD_SEVENSEG);
-        spi_transmit_32(i16_i16_to_u32(xc0, yc0));
-        spi_transmit_32(u16_u16_to_u32(size, number));
-        EVE_cs_clear();
-    }
-    else
-    {
-        spi_transmit_burst(CMD_SEVENSEG);
-        spi_transmit_burst(i16_i16_to_u32(xc0, yc0));
-        spi_transmit_burst(u16_u16_to_u32(size, number));
-    }
-}
-
-/**
- * @brief Draw a seven segment display for decimal numbers from 0 to 9, only works in burst-mode.
- */
-void EVE_cmd_sevenseg_burst(const int16_t xc0, const int16_t yc0, const uint16_t size, const uint16_t number)
-{
-    spi_transmit_burst(CMD_SEVENSEG);
-    spi_transmit_burst(i16_i16_to_u32(xc0, yc0));
-    spi_transmit_burst(u16_u16_to_u32(size, number));
-}
-
-/**
- * @brief Display a multiline message box.
- */
-void EVE_cmd_messagebox(const uint16_t font, const uint16_t options, const char * const p_text)
-{
-    if (0U == g_cmd_burst)
-    {
-        eve_begin_cmd(CMD_MESSAGEBOX);
-        spi_transmit_32(u16_u16_to_u32(font, options));
-        private_string_write(p_text);
-        EVE_cs_clear();
-    }
-    else
-    {
-        spi_transmit_burst(CMD_MESSAGEBOX);
-        spi_transmit_burst(u16_u16_to_u32(font, options));
-        private_string_write_burst(p_text);
-    }
-}
-
-/**
- * @brief Display a multiline message box, only works in burst-mode.
- */
-void EVE_cmd_messagebox_burst(const uint16_t font, const uint16_t options, const char * const p_text)
-{
-    spi_transmit_burst(CMD_MESSAGEBOX);
-    spi_transmit_burst(u16_u16_to_u32(font, options));
-    private_string_write_burst(p_text);
-}
-
-/**
- * @brief Display a multiline tooltip box.
- */
-void EVE_cmd_tooltip(const int16_t xco, const int16_t yco, const uint16_t font, const uint16_t options, const char * const p_text)
-{
-    if (0U == g_cmd_burst)
-    {
-        eve_begin_cmd(CMD_TOOLTIP);
-        spi_transmit_32(i16_i16_to_u32(xco, yco));
-        spi_transmit_32(u16_u16_to_u32(font, options));
-        private_string_write(p_text);
-        EVE_cs_clear();
-    }
-    else
-    {
-        spi_transmit_burst(CMD_TOOLTIP);
-        spi_transmit_burst(i16_i16_to_u32(xco, yco));
-        spi_transmit_burst(u16_u16_to_u32(font, options));
-        private_string_write_burst(p_text);
-    }
-}
-
-/**
- * @brief Display a multiline tooltip box, only works in burst-mode.
- */
-void EVE_cmd_tooltip_burst(const int16_t xco, const int16_t yco, const uint16_t font, const uint16_t options, const char * const p_text)
-{
-    spi_transmit_burst(CMD_TOOLTIP);
-    spi_transmit_burst(i16_i16_to_u32(xco, yco));
-    spi_transmit_burst(u16_u16_to_u32(font, options));
-    private_string_write_burst(p_text);
-}
-
-/**
- * @brief Draw a keyboard or keypad.
- */
-void EVE_cmd_keyboard(const int16_t xco, const int16_t yco, const uint16_t wid, const uint16_t hgt, const uint16_t font, const uint16_t options, const char * const p_text)
-{
-    if (0U == g_cmd_burst)
-    {
-        eve_begin_cmd(CMD_KEYBOARD);
-        spi_transmit_32(i16_i16_to_u32(xco, yco));
-        spi_transmit_32(u16_u16_to_u32(wid, hgt));
-        spi_transmit_32(u16_u16_to_u32(font, options));
-        private_string_write(p_text);
-        EVE_cs_clear();
-    }
-    else
-    {
-        spi_transmit_burst(CMD_KEYBOARD);
-        spi_transmit_burst(i16_i16_to_u32(xco, yco));
-        spi_transmit_burst(u16_u16_to_u32(wid, hgt));
-        spi_transmit_burst(u16_u16_to_u32(font, options));
-        private_string_write_burst(p_text);
-    }
-}
-
-/**
- * @brief Draw a keyboard or keypad, only works in burst-mode.
- */
-void EVE_cmd_keyboard_burst(const int16_t xco, const int16_t yco, const uint16_t wid, const uint16_t hgt, const uint16_t font, const uint16_t options, const char * const p_text)
-{
-    spi_transmit_burst(CMD_KEYBOARD);
-    spi_transmit_burst(i16_i16_to_u32(xco, yco));
-    spi_transmit_burst(u16_u16_to_u32(wid, hgt));
-    spi_transmit_burst(u16_u16_to_u32(font, options));
-    private_string_write_burst(p_text);
-}
-
-/**
- * @brief Create a blurred image of the current screen.
- */
-void EVE_cmd_blurscreen(void)
-{
-    if (0U == g_cmd_burst)
-    {
-        eve_begin_cmd(CMD_BLURSCREEN);
-        EVE_cs_clear();
-    }
-    else
-    {
-        spi_transmit_burst(CMD_BLURSCREEN);
-    }
-}
-
-/**
- * @brief Create a blurred image of the current screen, only works in burst-mode.
- */
-void EVE_cmd_blurscreen_burst(void)
-{
-    spi_transmit_burst(CMD_BLURSCREEN);
-}
-
-/**
- * @brief Draw a previously blurred image of the screen generated by cmd_blurscreen.
- */
-void EVE_cmd_blurdraw(void)
-{
-    if (0U == g_cmd_burst)
-    {
-        eve_begin_cmd(CMD_BLURDRAW);
-        EVE_cs_clear();
-    }
-    else
-    {
-        spi_transmit_burst(CMD_BLURDRAW);
-    }
-}
-
-/**
- * @brief Draw a previously blurred image of the screen generated by cmd_blurscreen, only works in burst-mode.
- */
-void EVE_cmd_blurdraw_burst(void)
-{
-    spi_transmit_burst(CMD_BLURDRAW);
-}
-
-/**
- * @brief Draws an LED-style graphic to simulate a round LED.
- */
-void EVE_cmd_ledround(const int16_t xco, const int16_t yco, const uint16_t radius, const uint16_t options)
-{
-    if (0U == g_cmd_burst)
-    {
-        eve_begin_cmd(CMD_LEDROUND);
-        spi_transmit_32(i16_i16_to_u32(xco, yco));
-        spi_transmit_32(u16_u16_to_u32(radius, options));
-        EVE_cs_clear();
-    }
-    else
-    {
-        spi_transmit_burst(CMD_LEDROUND);
-        spi_transmit_burst(i16_i16_to_u32(xco, yco));
-        spi_transmit_burst(u16_u16_to_u32(radius, options));
-    }
-}
-
-/**
- * @brief DDraws an LED-style graphic to simulate a round LED, only works in burst-mode.
- */
-void EVE_cmd_ledround_burst(const int16_t xco, const int16_t yco, const uint16_t radius, const uint16_t options)
-{
-    spi_transmit_burst(CMD_LEDROUND);
-    spi_transmit_burst(i16_i16_to_u32(xco, yco));
-    spi_transmit_burst(u16_u16_to_u32(radius, options));
-}
-
-/**
- * @brief Draws an LED-style graphic to simulate a rectangular LED.
- */
-void EVE_cmd_ledrect(const int16_t xco, const int16_t yco, const uint16_t wid, const uint16_t hgt, const uint16_t options)
-{
-    if (0U == g_cmd_burst)
-    {
-        eve_begin_cmd(CMD_LEDRECT);
-        spi_transmit_32(i16_i16_to_u32(xco, yco));
-        spi_transmit_32(u16_u16_to_u32(wid, hgt));
-        spi_transmit_32(u16_u16_to_u32(options, 0U));
-        EVE_cs_clear();
-    }
-    else
-    {
-        spi_transmit_burst(CMD_LEDRECT);
-        spi_transmit_burst(i16_i16_to_u32(xco, yco));
-        spi_transmit_burst(u16_u16_to_u32(wid, hgt));
-        spi_transmit_burst(u16_u16_to_u32(options, 0U));
-    }
-}
-
-/**
- * @brief Draws an LED-style graphic to simulate a rectangular LED, only works in burst-mode.
- */
-void EVE_cmd_ledrect_burst(const int16_t xco, const int16_t yco, const uint16_t wid, const uint16_t hgt, const uint16_t options)
-{
-    spi_transmit_burst(CMD_LEDRECT);
-    spi_transmit_burst(i16_i16_to_u32(xco, yco));
-    spi_transmit_burst(u16_u16_to_u32(wid, hgt));
-    spi_transmit_burst(u16_u16_to_u32(options, 0U));
-}
-
-/**
- * @brief Draws a feedback emoji.
- */
-void EVE_cmd_feedbackicon(const int16_t xco, const int16_t yco, const uint16_t rad1, const uint16_t rad2, const int16_t sentiment)
-{
-    if (0U == g_cmd_burst)
-    {
-        eve_begin_cmd(CMD_FEEDBACKICON);
-        spi_transmit_32(i16_i16_to_u32(xco, yco));
-        spi_transmit_32(u16_u16_to_u32(rad1, rad2));
-        spi_transmit_32(u16_u16_to_u32(sentiment, 0U));
-        EVE_cs_clear();
-    }
-    else
-    {
-        spi_transmit_burst(CMD_FEEDBACKICON);
-        spi_transmit_burst(i16_i16_to_u32(xco, yco));
-        spi_transmit_burst(u16_u16_to_u32(rad1, rad2));
-        spi_transmit_burst(u16_u16_to_u32(sentiment, 0U));
-    }
-}
-
-/**
- * @brief Draws a feedback emoji, only works in burst-mode.
- */
-void EVE_cmd_feedbackicon_burst(const int16_t xco, const int16_t yco, const uint16_t rad1, const uint16_t rad2, const int16_t sentiment)
-{
-    spi_transmit_burst(CMD_FEEDBACKICON);
-    spi_transmit_burst(i16_i16_to_u32(xco, yco));
-    spi_transmit_burst(u16_u16_to_u32(rad1, rad2));
-    spi_transmit_burst(u16_u16_to_u32(sentiment, 0U));
-}
-
-/**
- * @brief Change data for a BARGRAPH bitmap into a VERTEX2F points for a LINESTRIP.
- */
-void EVE_cmd_plotdraw(const uint32_t source, const uint16_t len, const uint16_t opt, const int16_t xco, const int16_t yco, const uint32_t xscale, const uint32_t yscale, const uint32_t threshold)
-{
-    if (0U == g_cmd_burst)
-    {
-        eve_begin_cmd(CMD_PLOTDRAW);
-        spi_transmit_32(source);
-        spi_transmit_32(u16_u16_to_u32(len, opt));
-        spi_transmit_32(i16_i16_to_u32(xco, yco));
-        spi_transmit_32(xscale);
-        spi_transmit_32(yscale);
-        spi_transmit_32(threshold);
-        EVE_cs_clear();
-    }
-    else
-    {
-        spi_transmit_burst(CMD_PLOTDRAW);
-        spi_transmit_burst(source);
-        spi_transmit_burst(u16_u16_to_u32(len, opt));
-        spi_transmit_burst(i16_i16_to_u32(xco, yco));
-        spi_transmit_burst(xscale);
-        spi_transmit_burst(yscale);
-        spi_transmit_burst(threshold);
-    }
-}
-
-/**
- * @brief Change data for a BARGRAPH bitmap into a VERTEX2F points for a LINESTRIP, only works in burst-mode.
- */
-void EVE_cmd_plotdraw_burst(const uint32_t source, const uint16_t len, const uint16_t opt, const int16_t xco, const int16_t yco, const uint32_t xscale, const uint32_t yscale, const uint32_t threshold)
-{
-    spi_transmit_burst(CMD_PLOTDRAW);
-    spi_transmit_burst(source);
-    spi_transmit_burst(u16_u16_to_u32(len, opt));
-    spi_transmit_burst(i16_i16_to_u32(xco, yco));
-    spi_transmit_burst(xscale);
-    spi_transmit_burst(yscale);
-    spi_transmit_burst(threshold);
-}
-
-/**
- * @brief Stream data in BARGRAPH bitmap format into a VERTEX2F points for a LINESTRIP.
- */
-void EVE_cmd_plotstream(const uint16_t len, const uint16_t opt, const int16_t xco, const int16_t yco, const uint32_t xscale, const uint32_t yscale, const uint32_t threshold, const uint8_t * const p_data)
-{
-    uint16_t len_transfer;
-    len_transfer = (len + 3U) / 4U; /* len in bytes, transfer in 32-bit words */
-
-    if (0U == g_cmd_burst)
-    {
-        eve_begin_cmd(CMD_PLOTSTREAM);
-        spi_transmit_32(u16_u16_to_u32(len, opt));
-        spi_transmit_32(i16_i16_to_u32(xco, yco));
-        spi_transmit_32(xscale);
-        spi_transmit_32(yscale);
-        spi_transmit_32(threshold);
-        for(uint16_t index = 0U; index < len_transfer; index++)
-        {
-            spi_transmit_32(((uint32_t *)p_data)[index]);
-        }
-        EVE_cs_clear();
-    }
-    else
-    {
-        spi_transmit_burst(CMD_PLOTSTREAM);
-        spi_transmit_burst(u16_u16_to_u32(len, opt));
-        spi_transmit_burst(i16_i16_to_u32(xco, yco));
-        spi_transmit_burst(xscale);
-        spi_transmit_burst(yscale);
-        spi_transmit_burst(threshold);
-        for(uint16_t index = 0U; index < len_transfer; index++)
-        {
-            spi_transmit_burst(((uint32_t *)p_data)[index]);
-        }
-    }
-}
-
-/**
- * @brief Stream data in BARGRAPH bitmap format into a VERTEX2F points for a LINESTRIP, only works in burst-mode.
- */
-void EVE_cmd_plotstream_burst(const uint16_t len, const uint16_t opt, const int16_t xco, const int16_t yco, const uint32_t xscale, const uint32_t yscale, const uint32_t threshold,  const uint8_t * const p_data)
-{
-    uint16_t len_transfer;
-    len_transfer = (len + 3U) / 4U; /* len in bytes, transfer in 32-bit words */
-    spi_transmit_burst(CMD_PLOTSTREAM);
-    spi_transmit_burst(u16_u16_to_u32(len, opt));
-    spi_transmit_burst(i16_i16_to_u32(xco, yco));
-    spi_transmit_burst(xscale);
-    spi_transmit_burst(yscale);
-    spi_transmit_burst(threshold);
-    for(uint16_t index = 0U; index < len_transfer; index++)
-    {
-        spi_transmit_burst(((uint32_t *)p_data)[index]);
-    }
-}
-
-/**
- * @brief Apply an offset to the current touch coordinates.
- */
-void EVE_cmd_touchoffset(const int16_t xco, const int16_t yco)
-{
-    if (0U == g_cmd_burst)
-    {
-        eve_begin_cmd(CMD_TOUCHOFFSET);
-        spi_transmit_32(i16_i16_to_u32(xco, yco));
-        EVE_cs_clear();
-    }
-    else
-    {
-        spi_transmit_burst(CMD_TOUCHOFFSET);
-        spi_transmit_burst(i16_i16_to_u32(xco, yco));
-    }
-}
-
-/**
- * @brief Apply an offset to the current touch coordinates, only works in burst-mode.
- */
-void EVE_cmd_touchoffset_burst(const int16_t xco, const int16_t yco)
-{
-    spi_transmit_burst(CMD_TOUCHOFFSET);
-    spi_transmit_burst(i16_i16_to_u32(xco, yco));
-}
-
-/**
- * @brief Ends the touch offset mode started by CMD_TOUCHOFFSET
- */
-void EVE_cmd_endtouchoffset(void)
-{
-    if (0U == g_cmd_burst)
-    {
-        eve_begin_cmd(CMD_ENDTOUCHOFFSET);
-        EVE_cs_clear();
-    }
-    else
-    {
-        spi_transmit_burst(CMD_ENDTOUCHOFFSET);
-    }
-}
-
-/**
- * @brief ends the touch offset mode started by CMD_TOUCHOFFSET, only works in burst-mode.
- */
-void EVE_cmd_endtouchoffset_burst(void)
-{
-    spi_transmit_burst(CMD_ENDTOUCHOFFSET);
-}
-
 
 #endif
