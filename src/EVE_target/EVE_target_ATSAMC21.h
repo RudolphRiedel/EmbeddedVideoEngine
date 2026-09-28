@@ -2,14 +2,14 @@
 @file    EVE_target_ATSAMC21.h
 @brief   target specific includes, definitions and functions
 @version 6.0
-@date    2025-06-20
+@date    2026-09-28
 @author  Rudolph Riedel
 
 @section LICENSE
 
 MIT License
 
-Copyright (c) 2016-2025 Rudolph Riedel
+Copyright (c) 2016-2026 Rudolph Riedel
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -131,7 +131,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #elif EVE_SPI == 5U
 #define EVE_SPI_SERCOM SERCOM5
 #define EVE_SPI_DMA_TRIGGER SERCOM5_DMAC_ID_TX
+#else
+#error "EVE_SPI must be set to select a SERCOM unit!"
 #endif
+
 
 #if defined (EVE_DMA)
     extern uint32_t EVE_dma_buffer[];

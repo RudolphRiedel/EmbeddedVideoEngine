@@ -2,14 +2,14 @@
 @file    EVE_target_AVR.h
 @brief   target specific includes, definitions and functions
 @version 6.0
-@date    2025-04-20
+@date    2026-09-28
 @author  Rudolph Riedel
 
 @section LICENSE
 
 MIT License
 
-Copyright (c) 2016-2025 Rudolph Riedel
+Copyright (c) 2016-2026 Rudolph Riedel
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -175,9 +175,9 @@ static inline uint8_t fetch_flash_byte(const uint8_t *p_data)
 {
     /* do we have an AVR with more than 64kB FLASH memory? */
 #if defined (__AVR_HAVE_ELPM__)
-    return (pgm_read_byte_far(data));
+    return (pgm_read_byte_far(p_data));
 #else
-    return (pgm_read_byte_near(data));
+    return (pgm_read_byte_near(p_data));
 #endif
 }
 

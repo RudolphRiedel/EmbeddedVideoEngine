@@ -2,7 +2,7 @@
 @file    EVE.h
 @brief   FT81x/BT81x/BT82x API definitions
 @version 6.0
-@date    2026-09-27
+@date    2026-09-28
 @author  Rudolph Riedel
 
 @section LICENSE
@@ -54,6 +54,13 @@ extern "C"
 #include "EVE_commands_BT82x_patch.h"
 #include "EVE_dl_commands.h"
 
+/* define NULL if it not already is */
+#ifndef NULL
+#include <stddef.h>
+#endif
+
+#define EVE_BURST_ACTIVE    ((uint8_t)1U)
+#define EVE_BURST_INACTIVE  ((uint8_t)0U)
 
 /* definitions that are shared across EVE2/EVE3/EVE4/EVE5 */
 
@@ -455,60 +462,60 @@ static inline uint32_t VERTEX_TRANSLATE_Y(const int32_t yco)
 #define CLR_TAG     ((uint8_t) 0x1U)
 
 /* Graphic command defines */
-#define EVE_NEVER      ((uint8_t) 0UL)
-#define EVE_LESS       ((uint8_t) 1UL)
-#define EVE_LEQUAL     ((uint8_t) 2UL)
-#define EVE_GREATER    ((uint8_t) 3UL)
-#define EVE_GEQUAL     ((uint8_t) 4UL)
-#define EVE_EQUAL      ((uint8_t) 5UL)
-#define EVE_NOTEQUAL   ((uint8_t) 6UL)
-#define EVE_ALWAYS     ((uint8_t) 7UL)
+#define EVE_NEVER      ((uint8_t) 0U)
+#define EVE_LESS       ((uint8_t) 1U)
+#define EVE_LEQUAL     ((uint8_t) 2U)
+#define EVE_GREATER    ((uint8_t) 3U)
+#define EVE_GEQUAL     ((uint8_t) 4U)
+#define EVE_EQUAL      ((uint8_t) 5U)
+#define EVE_NOTEQUAL   ((uint8_t) 6U)
+#define EVE_ALWAYS     ((uint8_t) 7U)
 
 /* Bitmap formats */
-#define EVE_ARGB1555        ((uint8_t) 0UL)
-#define EVE_L1              ((uint8_t) 1UL)
-#define EVE_L4              ((uint8_t) 2UL)
-#define EVE_L8              ((uint8_t) 3UL)
-#define EVE_RGB332          ((uint8_t) 4UL)
-#define EVE_ARGB2           ((uint8_t) 5UL)
-#define EVE_ARGB4           ((uint8_t) 6UL)
-#define EVE_RGB565          ((uint8_t) 7UL)
-#define EVE_BARGRAPH        ((uint8_t) 11UL)
-#define EVE_PALETTED565     ((uint32_t) 14UL)
-#define EVE_PALETTED4444    ((uint32_t) 15UL)
-#define EVE_PALETTED8       ((uint32_t) 16UL)
-#define EVE_L2              ((uint32_t) 17UL)
+#define EVE_ARGB1555        ((uint8_t) 0U)
+#define EVE_L1              ((uint8_t) 1U)
+#define EVE_L4              ((uint8_t) 2U)
+#define EVE_L8              ((uint8_t) 3U)
+#define EVE_RGB332          ((uint8_t) 4U)
+#define EVE_ARGB2           ((uint8_t) 5U)
+#define EVE_ARGB4           ((uint8_t) 6U)
+#define EVE_RGB565          ((uint8_t) 7U)
+#define EVE_BARGRAPH        ((uint8_t) 11U)
+#define EVE_PALETTED565     ((uint32_t) 14U)
+#define EVE_PALETTED4444    ((uint32_t) 15U)
+#define EVE_PALETTED8       ((uint32_t) 16U)
+#define EVE_L2              ((uint32_t) 17U)
 
 
 /* Bitmap filter types */
-#define EVE_NEAREST    ((uint8_t) 0UL)
-#define EVE_BILINEAR   ((uint8_t) 1UL)
+#define EVE_NEAREST    ((uint8_t) 0U)
+#define EVE_BILINEAR   ((uint8_t) 1U)
 
 /* Bitmap wrap types */
-#define EVE_BORDER     ((uint8_t) 0UL)
-#define EVE_REPEAT     ((uint8_t) 1UL)
+#define EVE_BORDER     ((uint8_t) 0U)
+#define EVE_REPEAT     ((uint8_t) 1U)
 
 /* Stencil defines */
-#define EVE_KEEP       ((uint8_t) 1UL)
-#define EVE_REPLACE    ((uint8_t) 2UL)
-#define EVE_INCR       ((uint8_t) 3UL)
-#define EVE_DECR       ((uint8_t) 4UL)
-#define EVE_INVERT     ((uint8_t) 5UL)
+#define EVE_KEEP       ((uint8_t) 1U)
+#define EVE_REPLACE    ((uint8_t) 2U)
+#define EVE_INCR       ((uint8_t) 3U)
+#define EVE_DECR       ((uint8_t) 4U)
+#define EVE_INVERT     ((uint8_t) 5U)
 
 /* Graphics display list swap defines */
-#define EVE_DLSWAP_DONE   ((uint8_t) 0UL)
-#define EVE_DLSWAP_LINE   ((uint8_t) 1UL)
-#define EVE_DLSWAP_FRAME  ((uint8_t) 2UL)
+#define EVE_DLSWAP_DONE   ((uint8_t) 0U)
+#define EVE_DLSWAP_LINE   ((uint8_t) 1U)
+#define EVE_DLSWAP_FRAME  ((uint8_t) 2U)
 
 /* Interrupt bits */
-#define EVE_INT_SWAP          ((uint8_t) 0x01)
-#define EVE_INT_TOUCH         ((uint8_t) 0x02)
-#define EVE_INT_TAG           ((uint8_t) 0x04)
-#define EVE_INT_SOUND         ((uint8_t) 0x08)
-#define EVE_INT_PLAYBACK      ((uint8_t) 0x10)
-#define EVE_INT_CMDEMPTY      ((uint8_t) 0x20)
-#define EVE_INT_CMDFLAG       ((uint8_t) 0x40)
-#define EVE_INT_CONVCOMPLETE  ((uint8_t) 0x80)
+#define EVE_INT_SWAP          ((uint8_t) 0x01U)
+#define EVE_INT_TOUCH         ((uint8_t) 0x02U)
+#define EVE_INT_TAG           ((uint8_t) 0x04U)
+#define EVE_INT_SOUND         ((uint8_t) 0x08U)
+#define EVE_INT_PLAYBACK      ((uint8_t) 0x10U)
+#define EVE_INT_CMDEMPTY      ((uint8_t) 0x20U)
+#define EVE_INT_CMDFLAG       ((uint8_t) 0x40U)
+#define EVE_INT_CONVCOMPLETE  ((uint8_t) 0x80U)
 
 /* Touch mode */
 #define EVE_TMODE_OFF        ((uint8_t) 0U)
@@ -593,17 +600,17 @@ static inline uint32_t VERTEX_TRANSLATE_Y(const int32_t yco)
 #define DL_REGION               ((uint32_t) 0x34000000UL)
 
 /* used with BITMAP_LAYOUT or CMD_SETBITMAP to indicate bitmap-format */
-#define EVE_RGB8            ((uint8_t) 19UL)
-#define EVE_ARGB8           ((uint8_t) 20UL)
-#define EVE_PALETTEDARGB8   ((uint8_t) 21UL)
-#define EVE_RGB6            ((uint8_t) 22UL)
-#define EVE_ARGB6           ((uint8_t) 23UL)
-#define EVE_LA1             ((uint8_t) 24UL)
-#define EVE_LA2             ((uint8_t) 25UL)
-#define EVE_LA4             ((uint8_t) 26UL)
-#define EVE_LA8             ((uint8_t) 27UL)
-#define EVE_YCBCR           ((uint8_t) 28UL)
-#define EVE_GLFORMAT        ((uint8_t) 31UL) /* used with BITMAP_LAYOUT to indicate bitmap-format is specified by BITMAP_EXT_FORMAT */
+#define EVE_RGB8            ((uint8_t) 19U)
+#define EVE_ARGB8           ((uint8_t) 20U)
+#define EVE_PALETTEDARGB8   ((uint8_t) 21U)
+#define EVE_RGB6            ((uint8_t) 22U)
+#define EVE_ARGB6           ((uint8_t) 23U)
+#define EVE_LA1             ((uint8_t) 24U)
+#define EVE_LA2             ((uint8_t) 25U)
+#define EVE_LA4             ((uint8_t) 26U)
+#define EVE_LA8             ((uint8_t) 27U)
+#define EVE_YCBCR           ((uint8_t) 28U)
+#define EVE_GLFORMAT        ((uint8_t) 31U) /* used with BITMAP_LAYOUT to indicate bitmap-format is specified by BITMAP_EXT_FORMAT */
 
 /* used with CMD_SETBITMAP to indicate bitmap-format */
 #define EVE_ASTC_4X4   ((uint32_t) 37808UL)
@@ -881,7 +888,7 @@ static inline uint32_t PALETTE_SOURCE(const uint32_t addr)
  */
 static inline uint32_t PALETTE_SOURCEH(const uint8_t addr)
 {
-    return (DL_PALETTE_SOURCE | addr);
+    return (DL_PALETTE_SOURCEH | addr);
 }
 
 /**
@@ -1305,9 +1312,9 @@ static inline uint32_t TAG(const uint8_t tagval)
 }
 
 /* Bitmap formats */
-#define EVE_PALETTED   ((uint8_t) 8UL)
-#define EVE_TEXT8X8    ((uint8_t) 9UL)
-#define EVE_TEXTVGA    ((uint8_t) 10UL)
+#define EVE_PALETTED   ((uint8_t) 8U)
+#define EVE_TEXT8X8    ((uint8_t) 9U)
+#define EVE_TEXTVGA    ((uint8_t) 10U)
 
 /* Host commands */
 #define EVE_ACTIVE       ((uint8_t) 0x00U) /* place EVE in active state */

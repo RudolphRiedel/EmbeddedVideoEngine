@@ -2,7 +2,7 @@
 @file    EVE_target_Arduino_AVR_XMEGA.h
 @brief   target specific includes, definitions and functions
 @version 6.0
-@date    2025-05-30
+@date    2026-09-28
 @author  Rudolph Riedel
 @note    This is not meant to work with the original ATXMega, but rather the newer
          megaAVR 0/1 series like the ATMega4809 on the Arduino Every which are
@@ -12,7 +12,7 @@
 
 MIT License
 
-Copyright (c) 2016-2025 Rudolph Riedel
+Copyright (c) 2016-2026 Rudolph Riedel
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
 to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute,
@@ -32,8 +32,8 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR TH
 
 */
 
-#ifndef EVE_TARGET_XMEGA_H
-#define EVE_TARGET_XMEGA_H
+#ifndef EVE_TARGET_ARDUINO_XMEGA_H
+#define EVE_TARGET_ARDUINO_XMEGA_H
 
 #if defined (ARDUINO)
 #if defined (__GNUC__)
@@ -144,4 +144,4 @@ static inline uint8_t fetch_flash_byte(const uint8_t *p_data)
 #endif /* __GNUC__ */
 #endif /* !Arduino */
 
-#endif /* EVE_TARGET_XMEGA_H */
+#endif /* EVE_TARGET_ARDUINO_XMEGA_H */

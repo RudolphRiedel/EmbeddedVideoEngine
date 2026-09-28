@@ -2,7 +2,7 @@
 @file    EVE_target.h
 @brief   target specific includes, definitions and functions
 @version 6.0
-@date    2026-09-27
+@date    2026-09-28
 @author  Rudolph Riedel
 
 @section LICENSE

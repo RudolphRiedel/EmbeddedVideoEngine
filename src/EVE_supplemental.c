@@ -2,7 +2,7 @@
 @file    EVE_supplemental.h
 @brief   supplemental functions
 @version 6.0
-@date    2026-05-24
+@date    2026-09-28
 @author  Rudolph Riedel
 
 @section LICENSE
@@ -42,10 +42,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "EVE.h"
 #include "EVE_supplemental.h"
 
-/* define NULL if it not already is */
-#ifndef NULL
-#include <stddef.h>
-#endif
 
 /*
  * @brief widget function to draw a circle

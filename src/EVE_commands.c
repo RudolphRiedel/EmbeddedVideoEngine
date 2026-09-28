@@ -2,7 +2,7 @@
 @file    EVE_commands.c
 @brief   FT8xx / BT8xx functions
 @version 6.0
-@date    2026-09-27
+@date    2026-09-28
 @author  Rudolph Riedel
 
 @section info
@@ -47,7 +47,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 - moved BT82x functions to EVE_commands_BT82x.c / .h
 - added EVE_execute_cmd_and_get_result() to replace duplicate code sequences
 - implemented EVE_cmd_memwrite() and EVE_cmd_memwrite_burst()
-- split private_string_write() and made the new private_string_write_burst() about 20% faster
+- split eve_private_string_write() and made the new eve_private_string_write_burst() about 20% faster
 - Bugfix: the correct CLKSEL parameter for the BT81x PLL range is 0x46, not 0x86
 - Fix: increased the initial delay after ACTIVATE to 60ms thanks to @ZigmundRat for pointing out the issue with his module
 - added optional EVE_CUSTOM_MS_DELAY after the initial delay after ACTIVATE in EVE_init()
@@ -55,13 +55,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include "EVE.h"
+#include "EVE_lib_private.h"
 
 #define DUMMY_BYTE ((uint8_t) 0x00U)
 
-/* define NULL if it not already is */
-#ifndef NULL
-#include <stddef.h>
-#endif
 
 volatile uint8_t g_cmd_burst = 0U; /* flag to indicate cmd-burst is active */
 static volatile uint8_t fault_recovered = E_OK; /* flag to indicate if EVE_busy triggered a fault recovery */
@@ -376,124 +373,6 @@ void eve_begin_cmd(const uint32_t command)
 #endif
     spi_transmit_32(command);
 }
-
-static void private_block_write(const uint8_t * const p_data, const uint16_t len); /* prototype to comply with MISRA */
-
-static void private_block_write(const uint8_t * const p_data, const uint16_t len)
-{
-    uint8_t padding;
-
-    padding = (uint8_t) (len & 3U); /* 0, 1, 2 or 3 */
-    padding = 4U - padding;         /* 4, 3, 2 or 1 */
-    padding &= 3U;                  /* 3, 2, 1 or 0 */
-
-    for (uint16_t count = 0U; count < len; count++)
-    {
-        spi_transmit(fetch_flash_byte(&p_data[count]));
-    }
-
-    while (padding > 0U)
-    {
-        spi_transmit((uint8_t) 0);
-        padding--;
-    }
-}
-
-void block_transfer(const uint8_t * const p_data, const uint32_t len)
-{
-    uint32_t bytes_left;
-    uint32_t offset = 0U;
-
-    bytes_left = len;
-    while (bytes_left > 0U)
-    {
-        uint32_t block_len;
-
-        block_len = (bytes_left > UINT32_C(3840)) ? UINT32_C(3840) : bytes_left;
-
-        EVE_cs_set();
-
-#if EVE_GEN > 4
-        spi_transmit_32_addr(MEM_WRITE | REG_CMDB_WRITE); /* EVE5 uses 32 bit adressing */
-#else
-        spi_transmit((uint8_t) 0xB0U); /* high-byte of REG_CMDB_WRITE + MEM_WRITE */
-        spi_transmit((uint8_t) 0x25U); /* middle-byte of REG_CMDB_WRITE */
-        spi_transmit((uint8_t) 0x78U); /* low-byte of REG_CMDB_WRITE */
-#endif
-        private_block_write(&p_data[offset], (uint16_t) block_len);
-        EVE_cs_clear();
-        offset += block_len;
-        bytes_left -= block_len;
-        EVE_execute_cmd();
-    }
-}
-
-/* write a string to coprocessor memory in context of a command: */
-/* no chip-select, just plain SPI-transfers */
-static void private_string_write(const char * const p_text); /* prototype to comply with MISRA */
-
-static void private_string_write(const char * const p_text)
-{
-    /* treat the array as bunch of bytes */
-    const uint8_t *const p_bytes = (const uint8_t *)p_text;
-    uint8_t exit_flag = 0U;
-
-    for (uint8_t textindex = 0U; (textindex < 249U) && (0U == exit_flag); textindex += 4U)
-    {
-        uint32_t calc = 0U;
-
-        for (uint8_t index = 0U; index < 4U; index++)
-        {
-            uint8_t data;
-
-            data = p_bytes[textindex + index];
-
-            if (0U == data)
-            {
-                exit_flag = 1U; /* leave outer loop */
-                break; /* leave inner loop */
-            }
-            calc += ((uint32_t)data) << (index * 8U);
-        }
-
-        spi_transmit_32(calc);
-    }
-
-    if(0U == exit_flag) /* left outer loop because the string is too long, send zeroes to terminate the string */
-    {
-        spi_transmit_32(0U);
-    }
-}
-
-static void private_string_write_burst(const char * const p_text);
-
-static void private_string_write_burst(const char * const p_text)
-{
-    const uint8_t *p_bytes = (const uint8_t *)p_text;
-
-    for (uint8_t index = 0U; index < 63U; index++)
-    {
-        uint8_t b0 = *p_bytes; if (b0 != 0U) { p_bytes++; }
-        uint8_t b1 = *p_bytes; if (b1 != 0U) { p_bytes++; }
-        uint8_t b2 = *p_bytes; if (b2 != 0U) { p_bytes++; }
-        uint8_t b3 = *p_bytes; if (b3 != 0U) { p_bytes++; }
-#if defined (EVE_DMA)
-        uint32_t calc = (uint32_t)b0 | ((uint32_t)b1 << 8U) | ((uint32_t)b2 << 16U) | ((uint32_t)b3 << 24U);
-        spi_transmit_burst(calc);
-#else
-        spi_transmit(b0);
-        spi_transmit(b1);
-        spi_transmit(b2);
-        spi_transmit(b3);
-#endif
-        if (0U == b3)
-        {
-            return;
-        }
-    }
-    spi_transmit_burst(0U);
-}
-
 
 /* ##################################################################
     coprocessor commands that are not used in displays lists,
@@ -819,7 +698,7 @@ void EVE_cmd_flashspitx(const uint32_t num, const uint8_t * const p_data)
     EVE_cs_clear();
     if (p_data != NULL)
     {
-        block_transfer(p_data, num);
+        eve_block_transfer(p_data, num);
     }
     else
     {
@@ -863,7 +742,7 @@ void EVE_cmd_flashwrite(const uint32_t ptr, const uint32_t num, const uint8_t * 
     EVE_cs_clear();
     if (p_data != NULL)
     {
-        block_transfer(p_data, num);
+        eve_block_transfer(p_data, num);
     }
     else
     {
@@ -925,7 +804,7 @@ void EVE_cmd_inflate2(const uint32_t ptr, const uint32_t options, const uint8_t 
     if ((UINT32_C(0) == options) && /* direct data, not by Media-FIFO or Flash */
         (p_data != NULL))
     {
-        block_transfer(p_data, len);
+        eve_block_transfer(p_data, len);
     }
     else
     {
@@ -1043,7 +922,7 @@ void EVE_cmd_loadimage(const uint32_t ptr, const uint32_t options, const uint8_t
 #endif
         (p_data != NULL))
     {
-        block_transfer(p_data, len);
+        eve_block_transfer(p_data, len);
     }
     else
     {
@@ -1088,7 +967,7 @@ void EVE_cmd_mediafifo(const uint32_t ptr, const uint32_t size)
  */
 void EVE_cmd_memcpy(const uint32_t dest, const uint32_t src, const uint32_t num)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_MEMCPY);
         spi_transmit_32(dest);
@@ -1183,7 +1062,7 @@ void EVE_cmd_playvideo(const uint32_t options, const uint8_t * const p_data, con
 #endif
         (p_data != NULL))
     {
-        block_transfer(p_data, len);
+        eve_block_transfer(p_data, len);
     }
     else
     {
@@ -1261,7 +1140,7 @@ void EVE_cmd_snapshot2(const uint32_t fmt, const uint32_t ptr, const int16_t xc0
  */
 void EVE_cmd_sync(void)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_SYNC);
         EVE_cs_clear();
@@ -1326,7 +1205,7 @@ void EVE_cmd_inflate(const uint32_t ptr, const uint8_t * const p_data, const uin
     EVE_cs_clear();
     if (p_data != NULL)
     {
-        block_transfer(p_data, len);
+        eve_block_transfer(p_data, len);
     }
     else
     {
@@ -1527,7 +1406,7 @@ void use_gt911(void)
     spi_transmit((uint8_t) 0xB0U); /* high-byte of REG_CMDB_WRITE + MEM_WRITE */
     spi_transmit((uint8_t) 0x25U); /* middle-byte of REG_CMDB_WRITE */
     spi_transmit((uint8_t) 0x78U); /* low-byte of REG_CMDB_WRITE */
-    private_block_write(eve_gt911_data, sizeof(eve_gt911_data));
+    eve_private_block_write(eve_gt911_data, sizeof(eve_gt911_data));
     EVE_cs_clear();
     EVE_execute_cmd();
 
@@ -1786,11 +1665,11 @@ void EVE_start_cmd_burst(void)
         EVE_execute_cmd(); /* this is a safe-guard to protect segmented display-list building with DMA from overlapping */
     }
 
-    g_cmd_burst = 42U;
+    g_cmd_burst = EVE_BURST_ACTIVE;
     EVE_dma_buffer[0U] = 0x7825B000UL; /* REG_CMDB_WRITE + MEM_WRITE low mid hi 00 */
     EVE_dma_buffer_index = 1U;
 #else
-    g_cmd_burst = 42U;
+    g_cmd_burst = EVE_BURST_ACTIVE;
     EVE_cs_set();
     spi_transmit((uint8_t) 0xB0U); /* high-byte of REG_CMDB_WRITE + MEM_WRITE */
     spi_transmit((uint8_t) 0x25U); /* middle-byte of REG_CMDB_WRITE */
@@ -1805,7 +1684,7 @@ void EVE_start_cmd_burst(void)
  */
 void EVE_end_cmd_burst(void)
 {
-    g_cmd_burst = 0U;
+    g_cmd_burst = EVE_BURST_INACTIVE;
 
 #if defined (EVE_DMA)
     EVE_start_dma_transfer(); /* begin DMA transfer */
@@ -1825,7 +1704,7 @@ void EVE_cmd_animframeram(const int16_t xc0, const int16_t yc0, const uint32_t a
 {
     const uint32_t param = i16_i16_to_u32(xc0, yc0);
 
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_ANIMFRAMERAM);
         spi_transmit_32(param);
@@ -1858,7 +1737,7 @@ void EVE_cmd_animframeram_burst(const int16_t xc0, const int16_t yc0, const uint
  */
 void EVE_cmd_animstartram(const int32_t chnl, const uint32_t aoptr, const uint32_t loop)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_ANIMSTARTRAM);
         spi_transmit_32(i32_to_u32(chnl));
@@ -1891,7 +1770,7 @@ void EVE_cmd_animstartram_burst(const int32_t chnl, const uint32_t aoptr, const 
  */
 void EVE_cmd_apilevel(const uint32_t level)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_APILEVEL);
         spi_transmit_32(level);
@@ -1920,7 +1799,7 @@ void EVE_cmd_apilevel_burst(const uint32_t level)
  */
 void EVE_cmd_calibratesub(const uint16_t xc0, const uint16_t yc0, const uint16_t width, const uint16_t height)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_CALIBRATESUB);
         spi_transmit_32(u16_u16_to_u32(xc0, yc0));
@@ -1934,7 +1813,7 @@ void EVE_cmd_calibratesub(const uint16_t xc0, const uint16_t yc0, const uint16_t
  */
 void EVE_cmd_calllist(const uint32_t adr)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_CALLLIST);
         spi_transmit_32(adr);
@@ -1961,7 +1840,7 @@ void EVE_cmd_calllist_burst(const uint32_t adr)
  */
 void EVE_cmd_return(void)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_RETURN);
         EVE_cs_clear();
@@ -1987,7 +1866,7 @@ void EVE_cmd_return_burst(void)
  */
 void EVE_cmd_hsf(const uint32_t hsf)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_HSF);
         spi_transmit_32(hsf);
@@ -2001,7 +1880,7 @@ void EVE_cmd_hsf(const uint32_t hsf)
  */
 void EVE_cmd_runanim(const uint32_t waitmask, const uint32_t play)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_RUNANIM);
         spi_transmit_32(waitmask);
@@ -2046,7 +1925,7 @@ void EVE_cmd_runanim_burst(const uint32_t waitmask, const uint32_t play)
  */
 void EVE_cmd_animdraw(const int32_t chnl)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_ANIMDRAW);
         spi_transmit_32(i32_to_u32(chnl));
@@ -2075,7 +1954,7 @@ void EVE_cmd_animframe(const int16_t xc0, const int16_t yc0, const uint32_t aopt
 {
     const uint32_t param = i16_i16_to_u32(xc0, yc0);
 
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_ANIMFRAME);
         spi_transmit_32(param);
@@ -2108,7 +1987,7 @@ void EVE_cmd_animframe_burst(const int16_t xc0, const int16_t yc0, const uint32_
  */
 void EVE_cmd_animstart(const int32_t chnl, const uint32_t aoptr, const uint32_t loop)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_ANIMSTART);
         spi_transmit_32(i32_to_u32(chnl));
@@ -2141,7 +2020,7 @@ void EVE_cmd_animstart_burst(const int32_t chnl, const uint32_t aoptr, const uin
  */
 void EVE_cmd_animstop(const int32_t chnl)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_ANIMSTOP);
         spi_transmit_32(i32_to_u32(chnl));
@@ -2170,7 +2049,7 @@ void EVE_cmd_animxy(const int32_t chnl, const int16_t xc0, const int16_t yc0)
 {
     const uint32_t param = i16_i16_to_u32(xc0, yc0);
 
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_ANIMXY);
         spi_transmit_32(i32_to_u32(chnl));
@@ -2200,7 +2079,7 @@ void EVE_cmd_animxy_burst(const int32_t chnl, const int16_t xc0, const int16_t y
  */
 void EVE_cmd_appendf(const uint32_t ptr, const uint32_t num)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_APPENDF);
         spi_transmit_32(ptr);
@@ -2235,7 +2114,7 @@ uint16_t EVE_cmd_bitmap_transform(const int32_t xc0, const int32_t yc0, const in
 {
     uint16_t ret_val = 0U;
 
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         uint16_t cmdoffset;
 
@@ -2310,7 +2189,7 @@ void EVE_cmd_bitmap_transform_burst(const int32_t xc0, const int32_t yc0, const 
  */
 void EVE_cmd_fillwidth(const uint32_t pixel)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_FILLWIDTH);
         spi_transmit_32(pixel);
@@ -2341,7 +2220,7 @@ void EVE_cmd_gradienta(const int16_t xc0, const int16_t yc0, const uint32_t argb
     const uint32_t param0 = i16_i16_to_u32(xc0, yc0);
     const uint32_t param1 = i16_i16_to_u32(xc1, yc1);
 
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_GRADIENTA);
         spi_transmit_32(param0);
@@ -2379,7 +2258,7 @@ void EVE_cmd_rotatearound(const int32_t xc0, const int32_t yc0, const uint32_t a
 {
     const uint32_t param = angle & UINT32_C(0xFFFF);
 
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_ROTATEAROUND);
         spi_transmit_32(i32_to_u32(xc0));
@@ -2423,13 +2302,13 @@ void EVE_cmd_button_var(const int16_t xc0, const int16_t yc0, const uint16_t wid
     const uint32_t param1 = u16_u16_to_u32(wid, hgt);
     const uint32_t param2 = u16_u16_to_u32(font, options);
 
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_BUTTON);
         spi_transmit_32(param0);
         spi_transmit_32(param1);
         spi_transmit_32(param2);
-        private_string_write(p_text);
+        eve_private_string_write(p_text);
 
         if (((uint16_t) (options & EVE_OPT_FORMAT)) != 0U)
         {
@@ -2449,7 +2328,7 @@ void EVE_cmd_button_var(const int16_t xc0, const int16_t yc0, const uint16_t wid
         spi_transmit_burst(param0);
         spi_transmit_burst(param1);
         spi_transmit_burst(param2);
-        private_string_write_burst(p_text);
+        eve_private_string_write_burst(p_text);
 
         if (((uint16_t) (options & EVE_OPT_FORMAT)) != 0U)
         {
@@ -2477,7 +2356,7 @@ void EVE_cmd_button_var_burst(const int16_t xc0, const int16_t yc0, const uint16
     spi_transmit_burst(i16_i16_to_u32(xc0, yc0));
     spi_transmit_burst(u16_u16_to_u32(wid, hgt));
     spi_transmit_burst(u16_u16_to_u32(font, options));
-    private_string_write_burst(p_text);
+    eve_private_string_write_burst(p_text);
 
     if (((uint16_t) (options & EVE_OPT_FORMAT)) != 0U)
     {
@@ -2502,12 +2381,12 @@ void EVE_cmd_text_var(const int16_t xc0, const int16_t yc0, const uint16_t font,
     const uint32_t param0 = i16_i16_to_u32(xc0, yc0);
     const uint32_t param1 = u16_u16_to_u32(font, options);
 
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_TEXT);
         spi_transmit_32(param0);
         spi_transmit_32(param1);
-        private_string_write(p_text);
+        eve_private_string_write(p_text);
 
         if (((uint16_t) (options & EVE_OPT_FORMAT)) != 0U)
         {
@@ -2526,7 +2405,7 @@ void EVE_cmd_text_var(const int16_t xc0, const int16_t yc0, const uint16_t font,
         spi_transmit_burst(CMD_TEXT);
         spi_transmit_burst(param0);
         spi_transmit_burst(param1);
-        private_string_write_burst(p_text);
+        eve_private_string_write_burst(p_text);
 
         if (((uint16_t) (options & EVE_OPT_FORMAT)) != 0U)
         {
@@ -2553,7 +2432,7 @@ void EVE_cmd_text_var_burst(const int16_t xc0, const int16_t yc0, const uint16_t
     spi_transmit_burst(CMD_TEXT);
     spi_transmit_burst(i16_i16_to_u32(xc0, yc0));
     spi_transmit_burst(u16_u16_to_u32(font, options));
-    private_string_write_burst(p_text);
+    eve_private_string_write_burst(p_text);
 
     if (((uint16_t) (options & EVE_OPT_FORMAT)) != 0U)
     {
@@ -2580,13 +2459,13 @@ void EVE_cmd_toggle_var(const int16_t xc0, const int16_t yc0, const uint16_t wid
     const uint32_t param1 = u16_u16_to_u32(wid, font);
     const uint32_t param2 = u16_u16_to_u32(options, state);
 
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_TOGGLE);
         spi_transmit_32(param0);
         spi_transmit_32(param1);
         spi_transmit_32(param2);
-        private_string_write(p_text);
+        eve_private_string_write(p_text);
 
         if (((uint16_t) (options & EVE_OPT_FORMAT)) != 0U)
         {
@@ -2606,7 +2485,7 @@ void EVE_cmd_toggle_var(const int16_t xc0, const int16_t yc0, const uint16_t wid
         spi_transmit_burst(param0);
         spi_transmit_burst(param1);
         spi_transmit_burst(param2);
-        private_string_write_burst(p_text);
+        eve_private_string_write_burst(p_text);
 
         if (((uint16_t) (options & EVE_OPT_FORMAT)) != 0U)
         {
@@ -2634,7 +2513,7 @@ void EVE_cmd_toggle_var_burst(const int16_t xc0, const int16_t yc0, const uint16
     spi_transmit_burst(i16_i16_to_u32(xc0, yc0));
     spi_transmit_burst(u16_u16_to_u32(wid, font));
     spi_transmit_burst(u16_u16_to_u32(options, state));
-    private_string_write_burst(p_text);
+    eve_private_string_write_burst(p_text);
 
     if (((uint16_t) (options & EVE_OPT_FORMAT)) != 0U)
     {
@@ -2659,7 +2538,7 @@ void EVE_cmd_toggle_var_burst(const int16_t xc0, const int16_t yc0, const uint16
  */
 void EVE_cmd_append(const uint32_t ptr, const uint32_t num)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_APPEND);
         spi_transmit_32(ptr);
@@ -2689,7 +2568,7 @@ void EVE_cmd_append_burst(const uint32_t ptr, const uint32_t num)
  */
 void EVE_cmd_bgcolor(const uint32_t color)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_BGCOLOR);
         spi_transmit_32(color);
@@ -2721,13 +2600,13 @@ void EVE_cmd_button(const int16_t xc0, const int16_t yc0, const uint16_t wid, co
     const uint32_t param1 = u16_u16_to_u32(wid, hgt);
     const uint32_t param2 = u16_u16_to_u32(font, options);
 
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_BUTTON);
         spi_transmit_32(param0);
         spi_transmit_32(param1);
         spi_transmit_32(param2);
-        private_string_write(p_text);
+        eve_private_string_write(p_text);
         EVE_cs_clear();
     }
     else
@@ -2736,7 +2615,7 @@ void EVE_cmd_button(const int16_t xc0, const int16_t yc0, const uint16_t wid, co
         spi_transmit_burst(param0);
         spi_transmit_burst(param1);
         spi_transmit_burst(param2);
-        private_string_write_burst(p_text);
+        eve_private_string_write_burst(p_text);
     }
 }
 
@@ -2750,7 +2629,7 @@ void EVE_cmd_button_burst(const int16_t xc0, const int16_t yc0, const uint16_t w
     spi_transmit_burst(i16_i16_to_u32(xc0, yc0));
     spi_transmit_burst(u16_u16_to_u32(wid, hgt));
     spi_transmit_burst(u16_u16_to_u32(font, options));
-    private_string_write_burst(p_text);
+    eve_private_string_write_burst(p_text);
 }
 
 /**
@@ -2759,7 +2638,7 @@ void EVE_cmd_button_burst(const int16_t xc0, const int16_t yc0, const uint16_t w
  */
 void EVE_cmd_calibrate(void)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_CALIBRATE);
         spi_transmit_32(UINT32_C(0));
@@ -2778,7 +2657,7 @@ void EVE_cmd_clock(const int16_t xc0, const int16_t yc0, const uint16_t rad, con
     const uint32_t param2 = u16_u16_to_u32(hours, mins);
     const uint32_t param3 = u16_u16_to_u32(secs, msecs);
 
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_CLOCK);
         spi_transmit_32(param0);
@@ -2819,7 +2698,7 @@ void EVE_cmd_dial(const int16_t xc0, const int16_t yc0, const uint16_t rad, cons
     const uint32_t param1 = u16_u16_to_u32(rad, options);
     const uint32_t param2 = u16_u16_to_u32(val, (uint16_t) 0x0000U);
 
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_DIAL);
         spi_transmit_32(param0);
@@ -2852,7 +2731,7 @@ void EVE_cmd_dial_burst(const int16_t xc0, const int16_t yc0, const uint16_t rad
  */
 void EVE_cmd_dlstart(void)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_DLSTART);
         EVE_cs_clear();
@@ -2876,7 +2755,7 @@ void EVE_cmd_dlstart_burst(void)
  */
 void EVE_cmd_fgcolor(const uint32_t color)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_FGCOLOR);
         spi_transmit_32(color);
@@ -2909,7 +2788,7 @@ void EVE_cmd_gauge(const int16_t xc0, const int16_t yc0, const uint16_t rad, con
     const uint32_t param2 = u16_u16_to_u32(major, minor);
     const uint32_t param3 = u16_u16_to_u32(val, range);
 
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_GAUGE);
         spi_transmit_32(param0);
@@ -2948,7 +2827,7 @@ void EVE_cmd_gauge_burst(const int16_t xc0, const int16_t yc0, const uint16_t ra
  */
 void EVE_cmd_getmatrix(int32_t * const p_a, int32_t * const p_b, int32_t * const p_c, int32_t * const p_d, int32_t * const p_e, int32_t * const p_f)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         uint16_t cmdoffset;
         uint32_t address;
@@ -3002,7 +2881,7 @@ void EVE_cmd_getmatrix(int32_t * const p_a, int32_t * const p_b, int32_t * const
  */
 void EVE_cmd_gradcolor(const uint32_t color)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_GRADCOLOR);
         spi_transmit_32(color);
@@ -3032,7 +2911,7 @@ void EVE_cmd_gradient(const int16_t xc0, const int16_t yc0, const uint32_t rgb0,
     const uint32_t param0 = i16_i16_to_u32(xc0, yc0);
     const uint32_t param1 = i16_i16_to_u32(xc1, yc1);
 
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_GRADIENT);
         spi_transmit_32(param0);
@@ -3075,13 +2954,13 @@ void EVE_cmd_keys(const int16_t xc0, const int16_t yc0, const uint16_t wid, cons
     const uint32_t param1 = u16_u16_to_u32(wid, hgt);
     const uint32_t param2 = u16_u16_to_u32(font, options);
 
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_KEYS);
         spi_transmit_32(param0);
         spi_transmit_32(param1);
         spi_transmit_32(param2);
-        private_string_write(p_text);
+        eve_private_string_write(p_text);
         EVE_cs_clear();
     }
     else
@@ -3090,7 +2969,7 @@ void EVE_cmd_keys(const int16_t xc0, const int16_t yc0, const uint16_t wid, cons
         spi_transmit_burst(param0);
         spi_transmit_burst(param1);
         spi_transmit_burst(param2);
-        private_string_write_burst(p_text);
+        eve_private_string_write_burst(p_text);
     }
 }
 
@@ -3106,7 +2985,7 @@ void EVE_cmd_keys_burst(const int16_t xc0, const int16_t yc0, const uint16_t wid
     spi_transmit_burst(i16_i16_to_u32(xc0, yc0));
     spi_transmit_burst(u16_u16_to_u32(wid, hgt));
     spi_transmit_burst(u16_u16_to_u32(font, options));
-    private_string_write_burst(p_text);
+    eve_private_string_write_burst(p_text);
 }
 
 /**
@@ -3114,7 +2993,7 @@ void EVE_cmd_keys_burst(const int16_t xc0, const int16_t yc0, const uint16_t wid
  */
 void EVE_cmd_loadidentity(void)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_LOADIDENTITY);
         EVE_cs_clear();
@@ -3142,7 +3021,7 @@ void EVE_cmd_memwrite(const uint32_t dest, const uint32_t num, const uint8_t * c
 {
     if (p_data != NULL)
     {
-        if (0U == g_cmd_burst)
+        if (EVE_BURST_INACTIVE == g_cmd_burst)
         {
             eve_begin_cmd(CMD_MEMWRITE);
             spi_transmit_32(dest);
@@ -3237,7 +3116,7 @@ void EVE_cmd_number(const int16_t xc0, const int16_t yc0, const uint16_t font, c
     const uint32_t param0 = i16_i16_to_u32(xc0, yc0);
     const uint32_t param1 = u16_u16_to_u32(font, options);
 
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_NUMBER);
         spi_transmit_32(param0);
@@ -3275,7 +3154,7 @@ void EVE_cmd_progress(const int16_t xc0, const int16_t yc0, const uint16_t wid, 
     const uint32_t param1 = u16_u16_to_u32(wid, hgt);
     const uint32_t param2 = u16_u16_to_u32(options, val);
 
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_PROGRESS);
         spi_transmit_32(param0);
@@ -3313,7 +3192,7 @@ void EVE_cmd_progress_burst(const int16_t xc0, const int16_t yc0, const uint16_t
  */
 void EVE_cmd_romfont(const uint32_t font, const uint32_t romslot)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_ROMFONT);
         spi_transmit_32(font);
@@ -3347,7 +3226,7 @@ void EVE_cmd_rotate(const uint32_t angle)
 {
     const uint32_t param = angle & UINT32_C(0xFFFF);
 
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_ROTATE);
         spi_transmit_32(param);
@@ -3374,7 +3253,7 @@ void EVE_cmd_rotate_burst(const uint32_t angle)
  */
 void EVE_cmd_scale(const int32_t scx, const int32_t scy)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_SCALE);
         spi_transmit_32(i32_to_u32(scx));
@@ -3404,7 +3283,7 @@ void EVE_cmd_scale_burst(const int32_t scx, const int32_t scy)
  */
 void EVE_cmd_screensaver(void)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_SCREENSAVER);
         EVE_cs_clear();
@@ -3434,7 +3313,7 @@ void EVE_cmd_scrollbar(const int16_t xc0, const int16_t yc0, const uint16_t wid,
     const uint32_t param2 = u16_u16_to_u32(options, val);
     const uint32_t param3 = u16_u16_to_u32(size, range);
 
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_SCROLLBAR);
         spi_transmit_32(param0);
@@ -3471,7 +3350,7 @@ void EVE_cmd_scrollbar_burst(const int16_t xc0, const int16_t yc0, const uint16_
  */
 void EVE_cmd_setbase(const uint32_t base)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_SETBASE);
         spi_transmit_32(base);
@@ -3503,7 +3382,7 @@ void EVE_cmd_setbitmap(const uint32_t addr, const uint16_t fmt, const uint16_t w
     const uint32_t param0 = u16_u16_to_u32(fmt, width);
     const uint32_t param1 = u16_u16_to_u32(height, (uint16_t) 0x0000U);
 
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_SETBITMAP);
         spi_transmit_32(addr);
@@ -3539,7 +3418,7 @@ void EVE_cmd_setbitmap_burst(const uint32_t addr, const uint16_t fmt, const uint
  */
 void EVE_cmd_setfont(const uint32_t font, const uint32_t ptr)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_SETFONT);
         spi_transmit_32(font);
@@ -3571,7 +3450,7 @@ void EVE_cmd_setfont_burst(const uint32_t font, const uint32_t ptr)
  */
 void EVE_cmd_setfont2(const uint32_t font, const uint32_t ptr, const uint32_t firstchar)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_SETFONT2);
         spi_transmit_32(font);
@@ -3606,7 +3485,7 @@ void EVE_cmd_setfont2_burst(const uint32_t font, const uint32_t ptr, const uint3
  */
 void EVE_cmd_setmatrix(void)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_SETMATRIX);
         EVE_cs_clear();
@@ -3630,7 +3509,7 @@ void EVE_cmd_setmatrix_burst(void)
  */
 void EVE_cmd_setscratch(const uint32_t handle)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_SETSCRATCH);
         spi_transmit_32(handle);
@@ -3662,7 +3541,7 @@ void EVE_cmd_sketch(const int16_t xc0, const int16_t yc0, const uint16_t wid, co
     const uint32_t param1 = u16_u16_to_u32(wid, hgt);
     const uint32_t param2 = u16_u16_to_u32(format, (uint16_t) 0x0000U);
 
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_SKETCH);
         spi_transmit_32(param0);
@@ -3705,7 +3584,7 @@ void EVE_cmd_slider(const int16_t xc0, const int16_t yc0, const uint16_t wid, co
     const uint32_t param2 = u16_u16_to_u32(options, val);
     const uint32_t param3 = u16_u16_to_u32(range, (uint16_t) 0x0000U);
 
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_SLIDER);
         spi_transmit_32(param0);
@@ -3745,7 +3624,7 @@ void EVE_cmd_spinner(const int16_t xc0, const int16_t yc0, const uint16_t style,
     const uint32_t param0 = i16_i16_to_u32(xc0, yc0);
     const uint32_t param1 = u16_u16_to_u32(style, scale);
 
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_SPINNER);
         spi_transmit_32(param0);
@@ -3775,7 +3654,7 @@ void EVE_cmd_spinner_burst(const int16_t xc0, const int16_t yc0, const uint16_t 
  */
 void EVE_cmd_stop(void)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_STOP);
         EVE_cs_clear();
@@ -3799,7 +3678,7 @@ void EVE_cmd_stop_burst(void)
  */
 void EVE_cmd_swap(void)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_SWAP);
         EVE_cs_clear();
@@ -3826,12 +3705,12 @@ void EVE_cmd_text(const int16_t xc0, const int16_t yc0, const uint16_t font, con
     const uint32_t param0 = i16_i16_to_u32(xc0, yc0);
     const uint32_t param1 = u16_u16_to_u32(font, options);
 
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_TEXT);
         spi_transmit_32(param0);
         spi_transmit_32(param1);
-        private_string_write(p_text);
+        eve_private_string_write(p_text);
         EVE_cs_clear();
     }
     else
@@ -3839,7 +3718,7 @@ void EVE_cmd_text(const int16_t xc0, const int16_t yc0, const uint16_t font, con
         spi_transmit_burst(CMD_TEXT);
         spi_transmit_burst(param0);
         spi_transmit_burst(param1);
-        private_string_write_burst(p_text);
+        eve_private_string_write_burst(p_text);
     }
 }
 
@@ -3851,7 +3730,7 @@ void EVE_cmd_text_burst(const int16_t xc0, const int16_t yc0, const uint16_t fon
     spi_transmit_burst(CMD_TEXT);
     spi_transmit_burst(i16_i16_to_u32(xc0, yc0));
     spi_transmit_burst(u16_u16_to_u32(font, options));
-    private_string_write_burst(p_text);
+    eve_private_string_write_burst(p_text);
 }
 
 /**
@@ -3864,13 +3743,13 @@ void EVE_cmd_toggle(const int16_t xc0, const int16_t yc0, const uint16_t wid, co
     const uint32_t param1 = u16_u16_to_u32(wid, font);
     const uint32_t param2 = u16_u16_to_u32(options, state);
 
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_TOGGLE);
         spi_transmit_32(param0);
         spi_transmit_32(param1);
         spi_transmit_32(param2);
-        private_string_write(p_text);
+        eve_private_string_write(p_text);
         EVE_cs_clear();
     }
     else
@@ -3879,7 +3758,7 @@ void EVE_cmd_toggle(const int16_t xc0, const int16_t yc0, const uint16_t wid, co
         spi_transmit_burst(param0);
         spi_transmit_burst(param1);
         spi_transmit_burst(param2);
-        private_string_write_burst(p_text);
+        eve_private_string_write_burst(p_text);
     }
 }
 
@@ -3893,7 +3772,7 @@ void EVE_cmd_toggle_burst(const int16_t xc0, const int16_t yc0, const uint16_t w
     spi_transmit_burst(i16_i16_to_u32(xc0, yc0));
     spi_transmit_burst(u16_u16_to_u32(wid, font));
     spi_transmit_burst(u16_u16_to_u32(options, state));
-    private_string_write_burst(p_text);
+    eve_private_string_write_burst(p_text);
 }
 
 /**
@@ -3901,7 +3780,7 @@ void EVE_cmd_toggle_burst(const int16_t xc0, const int16_t yc0, const uint16_t w
  */
 void EVE_cmd_translate(const int32_t tr_x, const int32_t tr_y)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_TRANSLATE);
         spi_transmit_32(i32_to_u32(tr_x));

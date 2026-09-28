@@ -2,8 +2,9 @@
 @file    EVE_target_Tricore_Tasking.h
 @brief   target specific includes, definitions and functions
 @version 6.0
-@date    2025-04-20
+@date    2026-09-28
 @author  Rudolph Riedel
+@note    implementation not complete!
 
 @section LICENSE
 
@@ -35,8 +36,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
 
-#ifndef EVE_TARGET_TRICORE_H
-#define EVE_TARGET_TRICORE_H
+#ifndef EVE_TARGET_TRICORE_TASKING_H
+#define EVE_TARGET_TRICORE_TASKING_H
 
 #if !defined (ARDUINO)
 #if defined(__TASKING__)
@@ -118,4 +119,4 @@ static inline uint8_t fetch_flash_byte(const uint8_t *p_data)
 #endif /* __TASKING__ */
 #endif /* !Arduino */
 
-#endif /* EVE_TARGET_TRICORE_H */
+#endif /* EVE_TARGET_TRICORE_TASKING_H */

@@ -2,7 +2,7 @@
 @file    EVE_target.c
 @brief   target specific functions for plain C targets
 @version 6.0
-@date    2026-09-27
+@date    2026-09-28
 @author  Rudolph Riedel
 
 @section LICENSE
@@ -50,8 +50,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #if defined (__SAMC21E18A__) \
     || defined (__SAMC21J18A__) \
-    || defined (__SAMC21J17A__) \
-    || defined (__SAMC21J16A__)
+    || defined (__SAMC21J17A__)
 /* note: target as set by AtmelStudio, valid  are all from the same family */
 
 void DELAY_MS(uint16_t val)

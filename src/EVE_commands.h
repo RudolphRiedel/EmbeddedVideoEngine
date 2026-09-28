@@ -2,7 +2,7 @@
 @file    EVE_commands.h
 @brief   FT8xx / BT8xx function prototypes
 @version 6.0
-@date    2026-09-27
+@date    2026-09-28
 @author  Rudolph Riedel
 
 @section LICENSE
@@ -110,8 +110,7 @@ void EVE_memWrite_flash_buffer(uint32_t const ft_address, const uint8_t * const 
 void EVE_memWrite_sram_buffer(uint32_t const ft_address, const uint8_t * const p_data, uint32_t const len);
 void EVE_memRead_sram_buffer(uint32_t const ft_address, uint8_t * const p_data, uint32_t const len);
 
-void eve_begin_cmd(const uint32_t command); /* exported for EVE_dl_commands */
-void block_transfer(const uint8_t * const p_data, const uint32_t len); /* exported for EVE_commands_BT82x */
+void eve_begin_cmd(const uint32_t command);
 uint8_t EVE_busy(void);
 uint8_t EVE_get_and_reset_fault_state(void);
 void EVE_execute_cmd(void);

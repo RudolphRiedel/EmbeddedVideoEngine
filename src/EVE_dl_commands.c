@@ -2,14 +2,14 @@
 @file    EVE_dl_commands.c
 @brief   contains FT8xx / BT8xx display list functions
 @version 6.0
-@date    2025-09-20
+@date    2026-09-28
 @author  Rudolph Riedel
 
 @section LICENSE
 
 MIT License
 
-Copyright (c) 2016-2025 Rudolph Riedel
+Copyright (c) 2016-2026 Rudolph Riedel
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -49,7 +49,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 void EVE_bitmap_ext_format(const uint16_t format)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(BITMAP_EXT_FORMAT(format));
         EVE_cs_clear();
@@ -73,7 +73,7 @@ void EVE_bitmap_ext_format_burst(const uint16_t format)
  */
 void EVE_bitmap_swizzle(const uint8_t red, const uint8_t green, const uint8_t blue, const uint8_t alpha)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(BITMAP_SWIZZLE(red, green, blue, alpha));
         EVE_cs_clear();
@@ -105,7 +105,7 @@ void EVE_bitmap_swizzle_burst(const uint8_t red, const uint8_t green, const uint
  */
 void EVE_cmd_dl(const uint32_t command)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(command);
         EVE_cs_clear();
@@ -129,7 +129,7 @@ void EVE_cmd_dl_burst(const uint32_t command)
  */
 void EVE_alpha_func(const uint8_t func, const uint8_t ref)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(ALPHA_FUNC(func, ref));
         EVE_cs_clear();
@@ -153,7 +153,7 @@ void EVE_alpha_func_burst(const uint8_t func, const uint8_t ref)
  */
 void EVE_begin(const uint32_t prim)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(DL_BEGIN | prim);
         EVE_cs_clear();
@@ -177,7 +177,7 @@ void EVE_begin_burst(const uint32_t prim)
  */
 void EVE_bitmap_handle(const uint8_t handle)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(BITMAP_HANDLE(handle));
         EVE_cs_clear();
@@ -201,7 +201,7 @@ void EVE_bitmap_handle_burst(const uint8_t handle)
  */
 void EVE_bitmap_layout(const uint8_t format, const uint16_t linestride, const uint16_t height)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(BITMAP_LAYOUT(format , linestride, height));
         EVE_cs_clear();
@@ -227,7 +227,7 @@ void EVE_bitmap_layout_burst(const uint8_t format, const uint16_t linestride, co
  */
 void EVE_bitmap_layout_h(const uint16_t linestride, const uint16_t height)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(BITMAP_LAYOUT_H(linestride, height));
         EVE_cs_clear();
@@ -251,7 +251,7 @@ void EVE_bitmap_layout_h_burst(const uint16_t linestride, const uint16_t height)
  */
 void EVE_bitmap_size(const uint8_t filter, const uint8_t wrapx, const uint8_t wrapy, const uint16_t width, const uint16_t height)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(BITMAP_SIZE(filter, wrapx, wrapy, width, height));
         EVE_cs_clear();
@@ -276,7 +276,7 @@ void EVE_bitmap_size_burst(const uint8_t filter, const uint8_t wrapx, const uint
  */
 void EVE_bitmap_size_h(const uint16_t width, const uint16_t height)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(BITMAP_SIZE_H(width, height));
         EVE_cs_clear();
@@ -301,7 +301,7 @@ void EVE_bitmap_size_h_burst(const uint16_t width, const uint16_t height)
  */
 void EVE_bitmap_source(const uint32_t addr)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(BITMAP_SOURCE(addr));
         EVE_cs_clear();
@@ -325,7 +325,7 @@ void EVE_bitmap_source_burst(const uint32_t addr)
  */
 void EVE_blend_func(const uint8_t src, const uint8_t dst)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(BLEND_FUNC(src, dst));
         EVE_cs_clear();
@@ -350,7 +350,7 @@ void EVE_blend_func_burst(const uint8_t src, const uint8_t dst)
  */
 void EVE_call(const uint16_t dest)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CALL(dest));
         EVE_cs_clear();
@@ -375,7 +375,7 @@ void EVE_call_burst(const uint16_t dest)
  */
 void EVE_cell(const uint8_t cell)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CELL(cell));
         EVE_cs_clear();
@@ -399,7 +399,7 @@ void EVE_cell_burst(const uint8_t cell)
  */
 void EVE_clear(const uint8_t color, const uint8_t stencil, const uint8_t tag)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CLEAR(color, stencil, tag));
         EVE_cs_clear();
@@ -423,7 +423,7 @@ void EVE_clear_burst(const uint8_t color, const uint8_t stencil, const uint8_t t
  */
 void EVE_clear_color_a(const uint8_t alpha)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CLEAR_COLOR_A(alpha));
         EVE_cs_clear();
@@ -447,7 +447,7 @@ void EVE_clear_color_a_burst(const uint8_t alpha)
  */
 void EVE_clear_color_rgb(const uint32_t color)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(DL_CLEAR_COLOR_RGB | (color & 0x00ffffffUL));
         EVE_cs_clear();
@@ -471,7 +471,7 @@ void EVE_clear_color_rgb_burst(const uint32_t color)
  */
 void EVE_clear_stencil(const uint8_t val)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CLEAR_STENCIL(val));
         EVE_cs_clear();
@@ -495,7 +495,7 @@ void EVE_clear_stencil_burst(const uint8_t val)
  */
 void EVE_clear_tag(const uint8_t val)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CLEAR_TAG(val));
         EVE_cs_clear();
@@ -520,7 +520,7 @@ void EVE_clear_tag_burst(const uint8_t val)
  */
 void EVE_color_rgb(const uint32_t color)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(DL_COLOR_RGB | (color & 0x00ffffffUL));
         EVE_cs_clear();
@@ -544,7 +544,7 @@ void EVE_color_rgb_burst(const uint32_t color)
  */
 void EVE_color_a(const uint8_t alpha)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(DL_COLOR_A | ((uint32_t) alpha));
         EVE_cs_clear();
@@ -568,7 +568,7 @@ void EVE_color_a_burst(const uint8_t alpha)
  */
 void EVE_color_mask(const uint8_t red, const uint8_t green, const uint8_t blue, const uint8_t alpha)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(COLOR_MASK(red, green, blue, alpha));
         EVE_cs_clear();
@@ -592,7 +592,7 @@ void EVE_color_mask_burst(const uint8_t red, const uint8_t green, const uint8_t 
  */
 void EVE_display(void)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(DL_DISPLAY);
         EVE_cs_clear();
@@ -616,7 +616,7 @@ void EVE_display_burst(void)
  */
 void EVE_end(void)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(DL_END);
         EVE_cs_clear();
@@ -641,7 +641,7 @@ void EVE_end_burst(void)
  */
 void EVE_jump(const uint16_t dest)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(JUMP(dest));
         EVE_cs_clear();
@@ -666,7 +666,7 @@ void EVE_jump_burst(const uint16_t dest)
  */
 void EVE_line_width(const uint16_t width)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(LINE_WIDTH(width));
         EVE_cs_clear();
@@ -691,7 +691,7 @@ void EVE_line_width_burst(const uint16_t width)
  */
 void EVE_macro(const uint8_t macro)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(MACRO(macro));
         EVE_cs_clear();
@@ -717,7 +717,7 @@ void EVE_macro_burst(const uint8_t macro)
  */
 void EVE_nop(void)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(DL_NOP);
         EVE_cs_clear();
@@ -742,7 +742,7 @@ void EVE_nop_burst(void)
  */
 void EVE_palette_source(const uint32_t addr)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(PALETTE_SOURCE(addr));
         EVE_cs_clear();
@@ -766,7 +766,7 @@ void EVE_palette_source_burst(const uint32_t addr)
  */
 void EVE_point_size(const uint16_t size)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(POINT_SIZE(size));
         EVE_cs_clear();
@@ -790,7 +790,7 @@ void EVE_point_size_burst(const uint16_t size)
  */
 void EVE_restore_context(void)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(DL_RESTORE_CONTEXT);
         EVE_cs_clear();
@@ -814,7 +814,7 @@ void EVE_restore_context_burst(void)
  */
 void EVE_return(void)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(DL_RETURN);
         EVE_cs_clear();
@@ -838,7 +838,7 @@ void EVE_return_burst(void)
  */
 void EVE_save_context(void)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(DL_SAVE_CONTEXT);
         EVE_cs_clear();
@@ -863,7 +863,7 @@ void EVE_save_context_burst(void)
  */
 void EVE_scissor_size(const uint16_t width, const uint16_t height)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(SCISSOR_SIZE(width, height));
         EVE_cs_clear();
@@ -888,7 +888,7 @@ void EVE_scissor_size_burst(const uint16_t width, const uint16_t height)
  */
 void EVE_scissor_xy(const uint16_t xc0, const uint16_t yc0)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(SCISSOR_XY(xc0, yc0));
         EVE_cs_clear();
@@ -912,7 +912,7 @@ void EVE_scissor_xy_burst(const uint16_t xc0, const uint16_t yc0)
  */
 void EVE_stencil_func(const uint8_t func, const uint8_t ref, const uint8_t mask)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(STENCIL_FUNC(func, ref, mask));
         EVE_cs_clear();
@@ -936,7 +936,7 @@ void EVE_stencil_func_burst(const uint8_t func, const uint8_t ref, const uint8_t
  */
 void EVE_stencil_mask(const uint8_t mask)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(STENCIL_MASK(mask));
         EVE_cs_clear();
@@ -960,7 +960,7 @@ void EVE_stencil_mask_burst(const uint8_t mask)
  */
 void EVE_stencil_op(const uint8_t sfail, const uint8_t spass)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(STENCIL_OP(sfail, spass));
         EVE_cs_clear();
@@ -984,7 +984,7 @@ void EVE_stencil_op_burst(const uint8_t sfail, const uint8_t spass)
  */
 void EVE_tag(const uint8_t tag)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(DL_TAG | tag);
         EVE_cs_clear();
@@ -1008,7 +1008,7 @@ void EVE_tag_burst(const uint8_t tag)
  */
 void EVE_tag_mask(const uint8_t mask)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(TAG_MASK(mask));
         EVE_cs_clear();
@@ -1032,7 +1032,7 @@ void EVE_tag_mask_burst(const uint8_t mask)
  */
 void EVE_vertex2f(const int16_t xc0, const int16_t yc0)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(VERTEX2F(xc0, yc0));
         EVE_cs_clear();
@@ -1056,7 +1056,7 @@ void EVE_vertex2f_burst(const int16_t xc0, const int16_t yc0)
  */
 void EVE_vertex2ii(const uint16_t xc0, const uint16_t yc0, const uint8_t handle, const uint8_t cell)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(VERTEX2II(xc0, yc0, handle, cell));
         EVE_cs_clear();
@@ -1080,7 +1080,7 @@ void EVE_vertex2ii_burst(const uint16_t xc0, const uint16_t yc0, const uint8_t h
  */
 void EVE_vertex_format(const uint8_t frac)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(VERTEX_FORMAT(frac));
         EVE_cs_clear();
@@ -1104,7 +1104,7 @@ void EVE_vertex_format_burst(const uint8_t frac)
  */
 void EVE_vertex_translate_x(const int32_t xco)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(VERTEX_TRANSLATE_X(xco));
         EVE_cs_clear();
@@ -1128,7 +1128,7 @@ void EVE_vertex_translate_x_burst(const int32_t xco)
  */
 void EVE_vertex_translate_y(const int32_t yco)
 {
-    if (0U == g_cmd_burst)
+    if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(VERTEX_TRANSLATE_Y(yco));
         EVE_cs_clear();
