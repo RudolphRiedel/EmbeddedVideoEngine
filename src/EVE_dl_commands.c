@@ -2,7 +2,7 @@
 @file    EVE_dl_commands.c
 @brief   contains FT8xx / BT8xx display list functions
 @version 6.0
-@date    2026-09-28
+@date    2026-10-02
 @author  Rudolph Riedel
 
 @section LICENSE
@@ -36,7 +36,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
 
-#include "EVE_dl_commands.h"
+#include "EVE.h"
+#include "EVE_lib_private.h"
 
 /* ##################################################################
     display list command functions for use with the coprocessor

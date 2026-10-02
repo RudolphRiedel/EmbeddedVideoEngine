@@ -2,7 +2,7 @@
 @file    EVE_lib_private.h
 @brief   support function function prototypes
 @version 6.0
-@date    2026-09-28
+@date    2026-10-02
 @author  Rudolph Riedel
 
 @section LICENSE
@@ -38,6 +38,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef EVE_LIB_PRIVATE_H
 #define EVE_LIB_PRIVATE_H
 
+extern volatile uint8_t g_cmd_burst; /* flag from EVE_commands.c to indicate cmd-burst is active */
 
 void eve_private_block_write(const uint8_t * const p_data, const uint16_t len);
 void eve_private_block_write_burst(const uint8_t * const p_data, const uint16_t len);

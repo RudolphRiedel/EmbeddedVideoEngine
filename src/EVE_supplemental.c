@@ -1,8 +1,8 @@
 /*
-@file    EVE_supplemental.h
+@file    EVE_supplemental.c
 @brief   supplemental functions
 @version 6.0
-@date    2026-09-28
+@date    2026-10-02
 @author  Rudolph Riedel
 
 @section LICENSE
@@ -225,12 +225,12 @@ void EVE_calibrate_manual(const uint16_t width, const uint16_t height)
     while (count < 3U)
     {
         EVE_cmd_dlstart();
-        EVE_clear_color_rgb(UINT32_C(0));
+        EVE_clear_color_rgb(0UL);
         EVE_clear((uint8_t) 1, (uint8_t) 1, (uint8_t) 1);
         EVE_vertex_format((uint8_t) 0); /* set to 0 - reduce precision for VERTEX2F to 1 pixel instead of 1/16 pixel default */
 
         /* draw Calibration Point on screen */
-        EVE_color_rgb(UINT32_C(0x0000ff));
+        EVE_color_rgb(0x0000ffUL);
         EVE_point_size((uint16_t) (15U * 16U));
         EVE_begin(EVE_POINTS);
 
@@ -241,7 +241,7 @@ void EVE_calibrate_manual(const uint16_t width, const uint16_t height)
         yc0 = (int16_t) display_y[count];
         EVE_vertex2f(xc0, yc0);
         EVE_end();
-        EVE_color_rgb(UINT32_C(0xffffff));
+        EVE_color_rgb(0xffffffUL);
         EVE_cmd_text((int16_t) ((int16_t) width / 2), (int16_t) 20, (uint16_t) 26, EVE_OPT_CENTER, "tap on the dot");
         calc = count + 0x31U;
         num[0U] = (char) calc;
@@ -258,18 +258,18 @@ void EVE_calibrate_manual(const uint16_t width, const uint16_t height)
 
             if (touch_lock != 0U)
             {
-                if ((touch_value & ((uint32_t) 0x80000000U)) != UINT32_C(0)) /* check if we have no touch */
+                if ((touch_value & ((uint32_t) 0x80000000U)) != 0UL) /* check if we have no touch */
                 {
                     touch_lock = 0U;
                 }
             }
             else
             {
-                if (UINT32_C(0) == (touch_value & ((uint32_t) 0x80000000U))) /* check if a touch is detected */
+                if (0UL == (touch_value & ((uint32_t) 0x80000000U))) /* check if a touch is detected */
                 {
-                    calc32 = ((touch_value >> 16U) & UINT32_C(0x03FF));
+                    calc32 = ((touch_value >> 16U) & 0x03FFUL);
                     touch_x[count] = (int32_t) calc32; /* raw Touchscreen X coordinate */
-                    calc32 = touch_value & UINT32_C(0x03FF);
+                    calc32 = touch_value & 0x03FFUL;
                     touch_y[count] = (int32_t) calc32; /* raw Touchscreen Y coordinate */
                     touch_lock = 1U;
                     count++;

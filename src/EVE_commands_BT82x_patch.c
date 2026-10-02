@@ -2,7 +2,7 @@
 @file    EVE_commands_BT82x_patch.c
 @brief   BT82x functions for patches
 @version 6.0
-@date    2026-09-28
+@date    2026-10-02
 @author  Rudolph Riedel
 
 @section info
@@ -50,7 +50,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #define DUMMY_BYTE ((uint8_t) 0x00U)
 #define FIFO_BIT_MASK ((uint16_t)0x3fffU)
-#define MEM_WRITE ((uint32_t) 0x80000000U) /* EVE Host Memory Write */
 
 
 /* ##################################################################
@@ -387,9 +386,9 @@ void EVE_cmd_queryimage(const uint32_t options, const uint8_t * const p_data, co
     spi_transmit_32(options);
     EVE_cs_clear();
 
-    if ((UINT32_C(0) == (options & EVE_OPT_MEDIAFIFO)) &&
-        (UINT32_C(0) == (options & EVE_OPT_FLASH)) &&
-        (UINT32_C(0) == (options & EVE_OPT_FS)) && /* direct data, neither by Media-FIFO or from Flash */
+    if ((0UL == (options & EVE_OPT_MEDIAFIFO)) &&
+        (0UL == (options & EVE_OPT_FLASH)) &&
+        (0UL == (options & EVE_OPT_FS)) && /* direct data, neither by Media-FIFO or from Flash */
         (p_data != NULL))
     {
         eve_block_transfer(p_data, len);
@@ -413,9 +412,9 @@ void EVE_cmd_queryasset(const uint32_t options, const uint8_t * const p_data, co
     spi_transmit_32(options);
     EVE_cs_clear();
 
-    if ((UINT32_C(0) == (options & EVE_OPT_MEDIAFIFO)) &&
-        (UINT32_C(0) == (options & EVE_OPT_FLASH)) &&
-        (UINT32_C(0) == (options & EVE_OPT_FS)) && /* direct data, neither by Media-FIFO or from Flash */
+    if ((0UL == (options & EVE_OPT_MEDIAFIFO)) &&
+        (0UL == (options & EVE_OPT_FLASH)) &&
+        (0UL == (options & EVE_OPT_FS)) && /* direct data, neither by Media-FIFO or from Flash */
         (p_data != NULL))
     {
         eve_block_transfer(p_data, len);

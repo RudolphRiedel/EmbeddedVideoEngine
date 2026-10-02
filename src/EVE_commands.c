@@ -2,7 +2,7 @@
 @file    EVE_commands.c
 @brief   FT8xx / BT8xx functions
 @version 6.0
-@date    2026-09-28
+@date    2026-10-02
 @author  Rudolph Riedel
 
 @section info
@@ -65,7 +65,7 @@ static volatile uint8_t fault_recovered = E_OK; /* flag to indicate if EVE_busy 
 
 #if EVE_GEN > 4
 #define FIFO_BIT_MASK ((uint16_t)0x3fffU)
-#define MEM_WRITE ((uint32_t) 0x80000000L) /* EVE Host Memory Write */
+#define MEM_WRITE ((uint32_t) 0x80000000UL) /* EVE Host Memory Write */
 #else
 #define FIFO_BIT_MASK ((uint16_t)0x0fffU)
 #define MEM_WRITE ((uint8_t) 0x80U) /* EVE Host Memory Write */
@@ -95,7 +95,7 @@ uint8_t EVE_memRead8(uint32_t const ft_address)
 {
     uint8_t data;
     EVE_cs_set();
-    spi_transmit_32(((ft_address >> 16U) & UINT32_C(0x007f)) + (ft_address & UINT32_C(0xff00)) + ((ft_address & UINT32_C(0x00ff)) << 16U));
+    spi_transmit_32(((ft_address >> 16U) & 0x007fUL) + (ft_address & 0xff00UL) + ((ft_address & 0x00ffUL) << 16U));
     data = spi_receive(DUMMY_BYTE); /* read data byte by sending another dummy byte */
     EVE_cs_clear();
     return (data);
@@ -109,7 +109,7 @@ uint16_t EVE_memRead16(uint32_t const ft_address)
     uint16_t data;
 
     EVE_cs_set();
-    spi_transmit_32(((ft_address >> 16U) & UINT32_C(0x007f)) + (ft_address & UINT32_C(0xff00)) + ((ft_address & UINT32_C(0x00ff)) << 16U));
+    spi_transmit_32(((ft_address >> 16U) & 0x007fUL) + (ft_address & 0xff00UL) + ((ft_address & 0x00ffUL) << 16U));
     uint8_t const lowbyte = spi_receive(DUMMY_BYTE); /* read low byte */
     uint8_t const hibyte = spi_receive(DUMMY_BYTE); /* read high byte */
     data = ((uint16_t) hibyte * 256U) | lowbyte;
@@ -121,7 +121,7 @@ uint32_t EVE_memRead32(uint32_t const ft_address)
 {
     uint32_t data;
     EVE_cs_set();
-    spi_transmit_32(((ft_address >> 16U) & UINT32_C(0x007f)) + (ft_address & UINT32_C(0xff00)) + ((ft_address & UINT32_C(0x00ff)) << 16U));
+    spi_transmit_32(((ft_address >> 16U) & 0x007fUL) + (ft_address & 0xff00UL) + ((ft_address & 0x00ffUL) << 16U));
     data = ((uint32_t) spi_receive(DUMMY_BYTE)); /* read low byte */
     data = ((uint32_t) spi_receive(DUMMY_BYTE) << 8U) | data;
     data = ((uint32_t) spi_receive(DUMMY_BYTE) << 16U) | data;
@@ -140,7 +140,7 @@ void EVE_memWrite8(uint32_t const ft_address, uint8_t const ft_data)
     EVE_cs_set();
     spi_transmit((uint8_t) ((ft_address >> 16U) | MEM_WRITE));
     spi_transmit((uint8_t) (ft_address >> 8U));
-    spi_transmit((uint8_t) (ft_address & UINT32_C(0x00FF)));
+    spi_transmit((uint8_t) (ft_address & 0x00FFUL));
     spi_transmit(ft_data);
     EVE_cs_clear();
 }
@@ -153,8 +153,8 @@ void EVE_memWrite16(uint32_t const ft_address, uint16_t const ft_data)
     EVE_cs_set();
     spi_transmit((uint8_t) ((ft_address >> 16U) | MEM_WRITE)); /* send Memory Write plus high address byte */
     spi_transmit((uint8_t) (ft_address >> 8U));                /* send middle address byte */
-    spi_transmit((uint8_t) (ft_address & UINT32_C(0x00FF)));   /* send low address byte */
-    spi_transmit((uint8_t) (ft_data & UINT32_C(0x00FF)));      /* send data low byte */
+    spi_transmit((uint8_t) (ft_address & 0x00FFUL));   /* send low address byte */
+    spi_transmit((uint8_t) (ft_data & 0x00FFUL));      /* send data low byte */
     spi_transmit((uint8_t) (ft_data >> 8U));                   /* send data high byte */
     EVE_cs_clear();
 }
@@ -167,7 +167,7 @@ void EVE_memWrite32(uint32_t const ft_address, uint32_t const ft_data)
     EVE_cs_set();
     spi_transmit((uint8_t) ((ft_address >> 16U) | MEM_WRITE)); /* send Memory Write plus high address byte */
     spi_transmit((uint8_t) (ft_address >> 8U));                /* send middle address byte */
-    spi_transmit((uint8_t) (ft_address & UINT32_C(0x00FF)));   /* send low address byte */
+    spi_transmit((uint8_t) (ft_address & 0x00FFUL));   /* send low address byte */
     spi_transmit_32(ft_data);
     EVE_cs_clear();
 }
@@ -182,7 +182,7 @@ void EVE_memWrite_flash_buffer(uint32_t const ft_address, const uint8_t * const 
         EVE_cs_set();
         spi_transmit((uint8_t) ((ft_address >> 16U) | MEM_WRITE));
         spi_transmit((uint8_t) (ft_address >> 8U));
-        spi_transmit((uint8_t) (ft_address & UINT32_C(0x00FF)));
+        spi_transmit((uint8_t) (ft_address & 0x00FFUL));
 
         for (uint32_t count = 0U; count < len; count++)
         {
@@ -203,7 +203,7 @@ void EVE_memWrite_sram_buffer(uint32_t const ft_address, const uint8_t * const p
         EVE_cs_set();
         spi_transmit((uint8_t) ((ft_address >> 16U) | MEM_WRITE));
         spi_transmit((uint8_t) (ft_address >> 8U));
-        spi_transmit((uint8_t) (ft_address & UINT32_C(0x00FF)));
+        spi_transmit((uint8_t) (ft_address & 0x00FFUL));
 
         for (uint32_t count = 0U; count < len; count++)
         {
@@ -223,7 +223,7 @@ void EVE_memRead_sram_buffer(uint32_t const ft_address, uint8_t * const p_data, 
     if (p_data != NULL)
     {
         EVE_cs_set();
-        spi_transmit_32(((ft_address >> 16U) & UINT32_C(0x007f)) + (ft_address & UINT32_C(0xff00)) + ((ft_address & UINT32_C(0x00ff)) << 16U));
+        spi_transmit_32(((ft_address >> 16U) & 0x007fUL) + (ft_address & 0xff00UL) + ((ft_address & 0x00ffUL) << 16U));
 
         for (uint32_t count = 0U; count < len; count++)
         {
@@ -254,7 +254,7 @@ static void CoprocessorFaultRecover(void)
 
         /* restore REG_PCLK in case it was set to zero by an error */
 #if (EVE_GEN > 3) && (defined EVE_PCLK_FREQ)
-        EVE_memWrite32(REG_PCLK_FREQ, (uint16_t) EVE_PCLK_FREQ);
+        EVE_memWrite32(REG_PCLK_FREQ, EVE_PCLK_FREQ);
         EVE_memWrite32(REG_PCLK, 1U); /* enable extsync mode */
 #else
         // fixme!
@@ -351,7 +351,7 @@ uint32_t EVE_execute_cmd_and_get_result(void)
 {
     uint16_t cmdoffset;
 
-    spi_transmit_32(UINT32_C(0));
+    spi_transmit_32(0UL);
     EVE_cs_clear();
     EVE_execute_cmd();
     cmdoffset = EVE_memRead16(REG_CMD_WRITE);
@@ -423,13 +423,14 @@ void EVE_cmd_flashprogram(const uint32_t dest, const uint32_t src, const uint32_
 void EVE_cmd_getimage(uint32_t * const p_source, uint32_t * const p_fmt, uint32_t * const p_width, uint32_t * const p_height, uint32_t * const p_palette)
 {
     uint16_t cmdoffset;
+    uint16_t offs;
 
     eve_begin_cmd(CMD_GETIMAGE);
-    spi_transmit_32(UINT32_C(0));
-    spi_transmit_32(UINT32_C(0));
-    spi_transmit_32(UINT32_C(0));
-    spi_transmit_32(UINT32_C(0));
-    spi_transmit_32(UINT32_C(0));
+    spi_transmit_32(0UL);
+    spi_transmit_32(0UL);
+    spi_transmit_32(0UL);
+    spi_transmit_32(0UL);
+    spi_transmit_32(0UL);
     EVE_cs_clear();
     EVE_execute_cmd();
 
@@ -437,23 +438,33 @@ void EVE_cmd_getimage(uint32_t * const p_source, uint32_t * const p_fmt, uint32_
 
     if (p_palette != NULL)
     {
-        *p_palette = EVE_memRead32(EVE_RAM_CMD + ((cmdoffset - UINT32_C(4)) & FIFO_BIT_MASK));
+        offs = (uint16_t)(cmdoffset - 4U);
+        offs &= FIFO_BIT_MASK;
+        *p_palette = EVE_memRead32(EVE_RAM_CMD + (uint32_t)offs);
     }
     if (p_height != NULL)
     {
-        *p_height = EVE_memRead32(EVE_RAM_CMD + ((cmdoffset - UINT32_C(8)) & FIFO_BIT_MASK));
+        offs = (uint16_t)(cmdoffset - 8U);
+        offs &= FIFO_BIT_MASK;
+        *p_height = EVE_memRead32(EVE_RAM_CMD + (uint32_t)offs);
     }
     if (p_width != NULL)
     {
-        *p_width = EVE_memRead32(EVE_RAM_CMD + ((cmdoffset - UINT32_C(12)) & FIFO_BIT_MASK));
+        offs = (uint16_t)(cmdoffset - 12U);
+        offs &= FIFO_BIT_MASK;
+        *p_width = EVE_memRead32(EVE_RAM_CMD + (uint32_t)offs);
     }
     if (p_fmt != NULL)
     {
-        *p_fmt = EVE_memRead32(EVE_RAM_CMD + ((cmdoffset - UINT32_C(16)) & FIFO_BIT_MASK));
+        offs = (uint16_t)(cmdoffset - 16U);
+        offs &= FIFO_BIT_MASK;
+        *p_fmt = EVE_memRead32(EVE_RAM_CMD + (uint32_t)offs);
     }
     if (p_source != NULL)
     {
-        *p_source = EVE_memRead32(EVE_RAM_CMD + ((cmdoffset - UINT32_C(20)) & FIFO_BIT_MASK));
+        offs = (uint16_t)(cmdoffset - 20U);
+        offs &= FIFO_BIT_MASK;
+        *p_source = EVE_memRead32(EVE_RAM_CMD + (uint32_t)offs);
     }
 }
 
@@ -524,10 +535,11 @@ void EVE_cmd_fontcache(const uint32_t font, const uint32_t ptr, const uint32_t n
 void EVE_cmd_fontcachequery(uint32_t * const p_total, uint32_t * const p_used)
 {
     uint16_t cmdoffset;
+    uint16_t offs;
 
     eve_begin_cmd(CMD_FONTCACHEQUERY);
-    spi_transmit_32(UINT32_C(0));
-    spi_transmit_32(UINT32_C(0));
+    spi_transmit_32(0UL);
+    spi_transmit_32(0UL);
     EVE_cs_clear();
     EVE_execute_cmd();
 
@@ -535,11 +547,15 @@ void EVE_cmd_fontcachequery(uint32_t * const p_total, uint32_t * const p_used)
 
     if (p_total != NULL)
     {
-        *p_total = EVE_memRead32(EVE_RAM_CMD + ((cmdoffset - 8UL) & 0xfffUL));
+        offs = (uint16_t)(cmdoffset - 8U);
+        offs &= FIFO_BIT_MASK;
+        *p_total = EVE_memRead32(EVE_RAM_CMD + (uint32_t)offs);
     }
     if (p_used != NULL)
     {
-        *p_used = EVE_memRead32(EVE_RAM_CMD + ((cmdoffset - 4UL) & 0xfffUL));
+        offs = (uint16_t)(cmdoffset - 4U);
+        offs &= FIFO_BIT_MASK;
+        *p_used = EVE_memRead32(EVE_RAM_CMD + (uint32_t)offs);
     }
 }
 
@@ -801,7 +817,7 @@ void EVE_cmd_inflate2(const uint32_t ptr, const uint32_t options, const uint8_t 
     spi_transmit_32(options);
     EVE_cs_clear();
 
-    if ((UINT32_C(0) == options) && /* direct data, not by Media-FIFO or Flash */
+    if ((0UL == options) && /* direct data, not by Media-FIFO or Flash */
         (p_data != NULL))
     {
         eve_block_transfer(p_data, len);
@@ -850,26 +866,33 @@ void EVE_cmd_coldstart(void)
 void EVE_cmd_getprops(uint32_t * const p_pointer, uint32_t * const p_width, uint32_t * const p_height)
 {
     uint16_t cmdoffset;
+    uint16_t offs;
 
     eve_begin_cmd(CMD_GETPROPS);
-    spi_transmit_32(UINT32_C(0));
-    spi_transmit_32(UINT32_C(0));
-    spi_transmit_32(UINT32_C(0));
+    spi_transmit_32(0UL);
+    spi_transmit_32(0UL);
+    spi_transmit_32(0UL);
     EVE_cs_clear();
     EVE_execute_cmd();
     cmdoffset = EVE_memRead16(REG_CMD_WRITE);
 
     if (p_pointer != NULL)
     {
-        *p_pointer = EVE_memRead32(EVE_RAM_CMD + ((cmdoffset - UINT32_C(12)) & FIFO_BIT_MASK));
+        offs = (uint16_t)(cmdoffset - 12U);
+        offs &= FIFO_BIT_MASK;
+        *p_pointer = EVE_memRead32(EVE_RAM_CMD + (uint32_t)offs);
     }
     if (p_width != NULL)
     {
-        *p_width = EVE_memRead32(EVE_RAM_CMD + ((cmdoffset - UINT32_C(8)) & FIFO_BIT_MASK));
+        offs = (uint16_t)(cmdoffset - 8U);
+        offs &= FIFO_BIT_MASK;
+        *p_width = EVE_memRead32(EVE_RAM_CMD + (uint32_t)offs);
     }
     if (p_height != NULL)
     {
-        *p_height = EVE_memRead32(EVE_RAM_CMD + ((cmdoffset - UINT32_C(4)) & FIFO_BIT_MASK));
+        offs = (uint16_t)(cmdoffset - 4U);
+        offs &= FIFO_BIT_MASK;
+        *p_height = EVE_memRead32(EVE_RAM_CMD + (uint32_t)offs);
     }
 }
 
@@ -916,9 +939,9 @@ void EVE_cmd_loadimage(const uint32_t ptr, const uint32_t options, const uint8_t
     spi_transmit_32(options);
     EVE_cs_clear();
 
-    if ((UINT32_C(0) == (options & EVE_OPT_MEDIAFIFO)) &&
+    if ((0UL == (options & EVE_OPT_MEDIAFIFO)) &&
 #if EVE_GEN > 2
-        (UINT32_C(0) == (options & EVE_OPT_FLASH)) && /* direct data, neither by Media-FIFO or from Flash */
+        (0UL == (options & EVE_OPT_FLASH)) && /* direct data, neither by Media-FIFO or from Flash */
 #endif
         (p_data != NULL))
     {
@@ -1053,12 +1076,12 @@ void EVE_cmd_playvideo(const uint32_t options, const uint8_t * const p_data, con
     spi_transmit_32(options);
     EVE_cs_clear();
 
-    if ((UINT32_C(0) == (options & EVE_OPT_MEDIAFIFO)) &&
+    if ((0UL == (options & EVE_OPT_MEDIAFIFO)) &&
 #if EVE_GEN > 2
-        (UINT32_C(0) == (options & EVE_OPT_FLASH)) && /* direct data, neither by Media-FIFO or from Flash */
+        (0UL == (options & EVE_OPT_FLASH)) && /* direct data, neither by Media-FIFO or from Flash */
 #endif
 #if EVE_GEN > 4
-        (UINT32_C(0) == (options & EVE_OPT_FS)) &&
+        (0UL == (options & EVE_OPT_FS)) &&
 #endif
         (p_data != NULL))
     {
@@ -1252,7 +1275,7 @@ uint8_t EVE_init_flash(void)
     while (EVE_FLASH_STATUS_INIT == status)
     {
         status = EVE_memRead8(REG_FLASH_STATUS);
-        DELAY_MS((uint16_t) 1);
+        DELAY_MS((uint16_t) 1U);
         timeout++;
         if (timeout > 100U) /* 100ms and still in init, lets call quits now and exit with an error */
         {
@@ -1282,27 +1305,27 @@ uint8_t EVE_init_flash(void)
 
         switch (result)
         {
-            case UINT32_C(0x0000):
+            case 0x0000UL:
                 ret_val = E_OK;
             break;
 
-            case UINT32_C(0xE001):
+            case 0xE001UL:
                 ret_val = EVE_FAIL_FLASHFAST_NOT_SUPPORTED;
             break;
 
-            case UINT32_C(0xE002):
+            case 0xE002UL:
                 ret_val = EVE_FAIL_FLASHFAST_NO_HEADER_DETECTED;
             break;
 
-            case UINT32_C(0xE003):
+            case 0xE003UL:
                 ret_val = EVE_FAIL_FLASHFAST_SECTOR0_FAILED;
             break;
 
-            case UINT32_C(0xE004):
+            case 0xE004UL:
                 ret_val = EVE_FAIL_FLASHFAST_BLOB_MISMATCH;
             break;
 
-            case UINT32_C(0xE005):
+            case 0xE005UL:
                 ret_val = EVE_FAIL_FLASHFAST_SPEED_TEST;
             break;
 
@@ -1438,7 +1461,7 @@ static uint8_t wait_regid(void)
 
     for (uint16_t timeout = 0U; timeout < 400U; timeout++)
     {
-        DELAY_MS((uint16_t) 1);
+        DELAY_MS((uint16_t) 1U);
 
         regid = EVE_memRead8(REG_ID);
         if (0x7cU == regid) /* EVE is up and running */
@@ -1465,7 +1488,7 @@ static uint8_t wait_reset(void)
 
     for (uint16_t timeout = 0U; timeout < 50U; timeout++)
     {
-        DELAY_MS((uint16_t) 1);
+        DELAY_MS((uint16_t) 1U);
 
         reset = EVE_memRead8(REG_CPURESET) & 7U;
         if (0U == reset) /* EVE reports all units running */
@@ -1483,7 +1506,7 @@ static void enable_pixel_clock(void)
     EVE_memWrite32(REG_GPIO, 0x80U); /* enable the DISP signal to the LCD panel, it is set to output in REG_GPIO_DIR by default */
 
 #if (EVE_GEN > 3) && (defined EVE_PCLK_FREQ)
-    EVE_memWrite32(REG_PCLK_FREQ, (uint16_t) EVE_PCLK_FREQ);
+    EVE_memWrite32(REG_PCLK_FREQ, EVE_PCLK_FREQ);
 
 #if defined (EVE_SET_REG_PCLK_2X)
     EVE_memWrite32(REG_PCLK_2X, 1U);
@@ -1585,7 +1608,7 @@ uint8_t EVE_init(void)
         {
 /* tell EVE that we changed the frequency from default to 72MHz for BT8xx */
 #if EVE_GEN > 2
-            EVE_memWrite32(REG_FREQUENCY, UINT32_C(72000000));
+            EVE_memWrite32(REG_FREQUENCY, 72000000UL);
 #endif
 
 /* we have a display with a Goodix GT911 / GT9271 touch-controller on it,
@@ -2131,7 +2154,7 @@ uint16_t EVE_cmd_bitmap_transform(const int32_t xc0, const int32_t yc0, const in
         spi_transmit_32(i32_to_u32(ty1));
         spi_transmit_32(i32_to_u32(tx2));
         spi_transmit_32(i32_to_u32(ty2));
-        spi_transmit_32(UINT32_C(0));
+        spi_transmit_32(0UL);
         EVE_cs_clear();
         EVE_execute_cmd();
         cmdoffset = EVE_memRead16(REG_CMD_WRITE);
@@ -2154,7 +2177,7 @@ uint16_t EVE_cmd_bitmap_transform(const int32_t xc0, const int32_t yc0, const in
         spi_transmit_burst(i32_to_u32(ty1));
         spi_transmit_burst(i32_to_u32(tx2));
         spi_transmit_burst(i32_to_u32(ty2));
-        spi_transmit_burst(UINT32_C(0));
+        spi_transmit_burst(0UL);
     }
     return (ret_val);
 }
@@ -2181,7 +2204,7 @@ void EVE_cmd_bitmap_transform_burst(const int32_t xc0, const int32_t yc0, const 
     spi_transmit_burst(i32_to_u32(ty1));
     spi_transmit_burst(i32_to_u32(tx2));
     spi_transmit_burst(i32_to_u32(ty2));
-    spi_transmit_burst(UINT32_C(0));
+    spi_transmit_burst(0UL);
 }
 
 /**
@@ -2256,7 +2279,7 @@ void EVE_cmd_gradienta_burst(const int16_t xc0, const int16_t yc0, const uint32_
  */
 void EVE_cmd_rotatearound(const int32_t xc0, const int32_t yc0, const uint32_t angle, const int32_t scale)
 {
-    const uint32_t param = angle & UINT32_C(0xFFFF);
+    const uint32_t param = angle & 0xFFFFUL;
 
     if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
@@ -2285,7 +2308,7 @@ void EVE_cmd_rotatearound_burst(const int32_t xc0, const int32_t yc0, const uint
     spi_transmit_burst(CMD_ROTATEAROUND);
     spi_transmit_burst(i32_to_u32(xc0));
     spi_transmit_burst(i32_to_u32(yc0));
-    spi_transmit_burst(angle & UINT32_C(0xFFFF));
+    spi_transmit_burst(angle & 0xFFFFUL);
     spi_transmit_burst(i32_to_u32(scale));
 }
 
@@ -2641,7 +2664,7 @@ void EVE_cmd_calibrate(void)
     if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         eve_begin_cmd(CMD_CALIBRATE);
-        spi_transmit_32(UINT32_C(0));
+        spi_transmit_32(0UL);
         EVE_cs_clear();
     }
 }
@@ -2830,48 +2853,54 @@ void EVE_cmd_getmatrix(int32_t * const p_a, int32_t * const p_b, int32_t * const
     if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
         uint16_t cmdoffset;
-        uint32_t address;
+        uint16_t offs;
 
         eve_begin_cmd(CMD_GETMATRIX);
-        spi_transmit_32(UINT32_C(0));
-        spi_transmit_32(UINT32_C(0));
-        spi_transmit_32(UINT32_C(0));
-        spi_transmit_32(UINT32_C(0));
-        spi_transmit_32(UINT32_C(0));
-        spi_transmit_32(UINT32_C(0));
+        spi_transmit_32(0UL);
+        spi_transmit_32(0UL);
+        spi_transmit_32(0UL);
+        spi_transmit_32(0UL);
+        spi_transmit_32(0UL);
+        spi_transmit_32(0UL);
         EVE_cs_clear();
         EVE_execute_cmd();
         cmdoffset = EVE_memRead16(REG_CMD_WRITE);
 
         if (p_f != NULL)
         {
-            address = EVE_RAM_CMD + ((cmdoffset - UINT32_C(4)) & FIFO_BIT_MASK);
-            *p_f = (int32_t) EVE_memRead32(address);
+            offs = (uint16_t)(cmdoffset - 4U);
+            offs &= FIFO_BIT_MASK;
+            *p_f = (int32_t) EVE_memRead32(EVE_RAM_CMD + (uint32_t)offs);
         }
         if (p_e != NULL)
         {
-            address = EVE_RAM_CMD + ((cmdoffset - UINT32_C(8)) & FIFO_BIT_MASK);
-            *p_e = (int32_t) EVE_memRead32(address);
+            offs = (uint16_t)(cmdoffset - 8U);
+            offs &= FIFO_BIT_MASK;
+            *p_e = (int32_t) EVE_memRead32(EVE_RAM_CMD + (uint32_t)offs);
         }
         if (p_d != NULL)
         {
-            address = EVE_RAM_CMD + ((cmdoffset - UINT32_C(12)) & FIFO_BIT_MASK);
-            *p_d = (int32_t) EVE_memRead32(address);
+            offs = (uint16_t)(cmdoffset - 12U);
+            offs &= FIFO_BIT_MASK;
+            *p_d = (int32_t) EVE_memRead32(EVE_RAM_CMD + (uint32_t)offs);
         }
         if (p_c != NULL)
         {
-            address = EVE_RAM_CMD + ((cmdoffset - UINT32_C(16)) & FIFO_BIT_MASK);
-            *p_c = (int32_t) EVE_memRead32(address);
+            offs = (uint16_t)(cmdoffset - 16U);
+            offs &= FIFO_BIT_MASK;
+            *p_c = (int32_t) EVE_memRead32(EVE_RAM_CMD + (uint32_t)offs);
         }
         if (p_b != NULL)
         {
-            address = EVE_RAM_CMD + ((cmdoffset - UINT32_C(20)) & FIFO_BIT_MASK);
-            *p_b = (int32_t) EVE_memRead32(address);
+            offs = (uint16_t)(cmdoffset - 20U);
+            offs &= FIFO_BIT_MASK;
+            *p_b = (int32_t) EVE_memRead32(EVE_RAM_CMD + (uint32_t)offs);
         }
         if (p_a != NULL)
         {
-            address = EVE_RAM_CMD + ((cmdoffset - UINT32_C(24)) & FIFO_BIT_MASK);
-            *p_a = (int32_t) EVE_memRead32(address);
+            offs = (uint16_t)(cmdoffset - 24U);
+            offs &= FIFO_BIT_MASK;
+            *p_a = (int32_t) EVE_memRead32(EVE_RAM_CMD + (uint32_t)offs);
         }
     }
 }
@@ -3224,7 +3253,7 @@ void EVE_cmd_romfont_burst(const uint32_t font, const uint32_t romslot)
  */
 void EVE_cmd_rotate(const uint32_t angle)
 {
-    const uint32_t param = angle & UINT32_C(0xFFFF);
+    const uint32_t param = angle & 0xFFFFUL;
 
     if (EVE_BURST_INACTIVE == g_cmd_burst)
     {
@@ -3245,7 +3274,7 @@ void EVE_cmd_rotate(const uint32_t angle)
 void EVE_cmd_rotate_burst(const uint32_t angle)
 {
     spi_transmit_burst(CMD_ROTATE);
-    spi_transmit_burst(angle & UINT32_C(0xFFFF));
+    spi_transmit_burst(angle & 0xFFFFUL);
 }
 
 /**

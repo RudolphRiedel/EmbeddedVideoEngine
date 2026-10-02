@@ -2,7 +2,7 @@
 @file    EVE_commands_BT82x
 @brief   BT82 functions
 @version 6.0
-@date    2026-09-28
+@date    2026-10-02
 @author  Rudolph Riedel
 
 @section info
@@ -53,7 +53,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #define DUMMY_BYTE ((uint8_t) 0x00U)
 #define FIFO_BIT_MASK ((uint16_t)0x3fffU)
-#define MEM_WRITE ((uint32_t) 0x80000000U) /* EVE Host Memory Write */
+#define MEM_WRITE ((uint32_t) 0x80000000UL) /* EVE Host Memory Write */
 
 
 /* ##################################################################
@@ -453,7 +453,7 @@ void EVE_cmd_inflate(const uint32_t ptr, const uint32_t options, const uint8_t *
     spi_transmit_32(options);
     EVE_cs_clear();
 
-    if ((UINT32_C(0) == options) && /* direct data, not by Media-FIFO, Flash or SD */
+    if ((0UL == options) && /* direct data, not by Media-FIFO, Flash or SD */
         (p_data != NULL))
     {
         eve_block_transfer(p_data, len);
@@ -478,7 +478,7 @@ void EVE_cmd_loadasset(const uint32_t ptr, const uint32_t options, const uint8_t
     spi_transmit_32(options);
     EVE_cs_clear();
 
-    if ((UINT32_C(0) == options) && /* direct data, not by Media-FIFO, Flash or SD */
+    if ((0UL == options) && /* direct data, not by Media-FIFO, Flash or SD */
         (p_data != NULL))
     {
         eve_block_transfer(p_data, len);
@@ -505,9 +505,9 @@ void EVE_cmd_loadimage(const uint32_t ptr, const uint32_t options, const uint8_t
     spi_transmit_32(options);
     EVE_cs_clear();
 
-    if ((UINT32_C(0) == (options & EVE_OPT_MEDIAFIFO)) &&
-        (UINT32_C(0) == (options & EVE_OPT_FLASH)) &&
-        (UINT32_C(0) == (options & EVE_OPT_FS)) && /* direct data, neither by Media-FIFO or from Flash */
+    if ((0UL == (options & EVE_OPT_MEDIAFIFO)) &&
+        (0UL == (options & EVE_OPT_FLASH)) &&
+        (0UL == (options & EVE_OPT_FS)) && /* direct data, neither by Media-FIFO or from Flash */
         (p_data != NULL))
     {
         eve_block_transfer(p_data, len);
@@ -530,7 +530,7 @@ void EVE_cmd_loadpatch(const uint32_t options, const uint8_t * const p_data, con
     spi_transmit_32(options);
     EVE_cs_clear();
 
-   if ((UINT32_C(0) == options) && /* direct data, not by Media-FIFO, Flash or SD */
+   if ((0UL == options) && /* direct data, not by Media-FIFO, Flash or SD */
         (p_data != NULL))
     {
         eve_block_transfer(p_data, len);
@@ -554,7 +554,7 @@ void EVE_cmd_loadwav(const uint32_t ptr, const uint32_t options, const uint8_t *
     spi_transmit_32(options);
     EVE_cs_clear();
 
-   if ((UINT32_C(0) == options) && /* direct data, not by Media-FIFO, Flash or SD */
+   if ((0UL == options) && /* direct data, not by Media-FIFO, Flash or SD */
         (p_data != NULL))
     {
         eve_block_transfer(p_data, len);
@@ -578,7 +578,7 @@ void EVE_cmd_playwav(const uint32_t ptr, const uint32_t options, const uint8_t *
     spi_transmit_32(options);
     EVE_cs_clear();
 
-   if ((UINT32_C(0) == options) && /* direct data, not by Media-FIFO, Flash or SD */
+   if ((0UL == options) && /* direct data, not by Media-FIFO, Flash or SD */
         (p_data != NULL))
     {
         eve_block_transfer(p_data, len);
@@ -775,9 +775,9 @@ static const uint8_t touch_patch[2908] PROGMEM =
 
 void configure_lvds(void)
 {
-    EVE_memWrite32(REG_SO_EN, UINT32_C(0));
-    EVE_memWrite32(REG_RE_ACTIVE, UINT32_C(0));
-    EVE_memWrite32(REG_LVDSTX_EN, UINT32_C(0));
+    EVE_memWrite32(REG_SO_EN, 0UL);
+    EVE_memWrite32(REG_RE_ACTIVE, 0UL);
+    EVE_memWrite32(REG_LVDSTX_EN, 0UL);
 
     /* place the swapchain-buffers at the end of the memory */
     /* 1920 x 1200 as assumed maximum resolution */
@@ -817,7 +817,7 @@ void configure_lvds(void)
     EVE_memWrite32(REG_RE_FORMAT, EVE_RGB8);
     EVE_memWrite32(REG_RE_W, EVE_HSIZE); /* CMD_RENDERTARGET: Render target width in pixels and must be a multiple of 16. */
     EVE_memWrite32(REG_RE_H, EVE_VSIZE); /* CMD_RENDERTARGET: Render target height in pixels. w × h must be a multiple of 128 */
-    EVE_memWrite32(REG_RE_DITHER, UINT32_C(0));
+    EVE_memWrite32(REG_RE_DITHER, 0UL);
     EVE_memWrite32(REG_RE_ACTIVE, 1UL);
 
     EVE_memWrite32(REG_LVDSTX_CTRL_CH0, EVE_LVDS_MODE); /* set mode defined by display configuration */
@@ -831,7 +831,7 @@ void configure_lvds(void)
     EVE_memWrite32(REG_LVDSTX_EN, LVDS_CH0_EN | LVDS_CH1_EN);
 #endif
 
-    DELAY_MS(10);
+    DELAY_MS(10U);
 
     EVE_memWrite32(REG_SO_EN, 1UL); /* enable scanout */
 
@@ -895,7 +895,7 @@ void EVE_write_display_parameters(void)
     EVE_memWrite32(REG_DISP, 1UL); /* at this point only enables the backlight, the LVDS-TX still needs to be configured */
 
     /* no need to configure Touch, auto-discovery and continous mode is reset default */
-    //EVE_memWrite32(REG_TOUCH_CONFIG, UINT32_C(0)); /* trigger auto-discovery for touch controller with 400kHz I2C */
+    //EVE_memWrite32(REG_TOUCH_CONFIG, 0UL); /* trigger auto-discovery for touch controller with 400kHz I2C */
     //EVE_memWrite32(REG_TOUCH_MODE, EVE_TMODE_CONTINUOUS); /* enable touch */
     // there is no REG_TOUCH_RZTHRESH in EVE5
 

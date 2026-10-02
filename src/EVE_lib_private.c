@@ -2,7 +2,7 @@
 @file    EVE_lib_private.c
 @brief   support functions to avoid code duplication
 @version 6.0
-@date    2026-09-28
+@date    2026-10-02
 @author  Rudolph Riedel
 
 @section info
@@ -43,13 +43,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include "EVE.h"
+#include "EVE_lib_private.h"
 
 #if EVE_GEN > 4
-#define FIFO_BIT_MASK ((uint16_t)0x3fffU)
-#define MEM_WRITE ((uint32_t) 0x80000000L) /* EVE Host Memory Write */
-#else
-#define FIFO_BIT_MASK ((uint16_t)0x0fffU)
-#define MEM_WRITE ((uint8_t) 0x80U) /* EVE Host Memory Write */
+#define MEM_WRITE ((uint32_t) 0x80000000UL) /* EVE Host Memory Write */
 #endif
 
 void eve_private_block_write(const uint8_t * const p_data, const uint16_t len)
@@ -112,7 +109,7 @@ void eve_block_transfer(const uint8_t * const p_data, const uint32_t len)
     {
         uint32_t block_len;
 
-        block_len = (bytes_left > UINT32_C(3840)) ? UINT32_C(3840) : bytes_left;
+        block_len = (bytes_left > 3840UL) ? 3840UL : bytes_left;
 
         EVE_cs_set();
 

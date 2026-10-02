@@ -2,7 +2,7 @@
 @file    EVE_commands_BT82x.h
 @brief   BT82x function prototypes
 @version 6.0
-@date    2026-09-27
+@date    2026-10-02
 @author  Rudolph Riedel
 
 @section LICENSE
@@ -39,8 +39,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #ifndef EVE_COMMANDS_BT82X_H
 #define EVE_COMMANDS_BT82X_H
-
-extern volatile uint8_t g_cmd_burst; /* flag from EVE_commands.c to indicate cmd-burst is active */
 
 /* ##################################################################
     commands and functions to be used outside of display-lists

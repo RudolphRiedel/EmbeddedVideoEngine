@@ -2,7 +2,7 @@
 @file    EVE_dl_commands.h
 @brief   contains FT8xx / BT8xx display list function prototypes
 @version 6.0
-@date    2025-09-20
+@date    2025-10-02
 @author  Rudolph Riedel
 
 @section LICENSE
@@ -39,9 +39,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef EVE_DL_COMMANDS_H
 #define EVE_DL_COMMANDS_H
 
-#include "EVE.h"
-
-extern volatile uint8_t g_cmd_burst; /* flag from EVE_commands.c to indicate cmd-burst is active */
 
 /* ##################################################################
     display list command functions for use with the coprocessor
