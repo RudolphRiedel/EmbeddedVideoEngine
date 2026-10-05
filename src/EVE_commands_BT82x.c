@@ -2,7 +2,7 @@
 @file    EVE_commands_BT82x
 @brief   BT82 functions
 @version 6.0
-@date    2026-10-02
+@date    2026-10-05
 @author  Rudolph Riedel
 
 @section info
@@ -647,6 +647,7 @@ void EVE_cmd_textdim(const uint32_t ptr, const uint16_t font, const uint16_t opt
     spi_transmit_32(u16_u16_to_u32(font, options));
     eve_private_string_write(p_text);
     EVE_cs_clear();
+    EVE_execute_cmd();
 }
 
 /**

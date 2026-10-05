@@ -2,7 +2,7 @@
 @file    EVE_supplemental.c
 @brief   supplemental functions
 @version 6.0
-@date    2026-10-02
+@date    2026-10-03
 @author  Rudolph Riedel
 
 @section LICENSE
@@ -106,20 +106,27 @@ static const int8_t sine_table[360] =
 
 /**
  * @brief Calculate coordinates from an angle and a length.
- * @param length distance from coordinate origin (0,0)
- * @param angle rotation in degrees
- * @return signed X/Y coordinates for use with VERTEX2F
+ * @param length distance from coordinate origin (0,0) in pixel, clamped to 2000
+ * @param angle rotation in degrees (0-359)
+ * @param p_xc0 pointer to write X coordinate to for use with VERTEX2F
+ * @param p_yc0 pointer to write Y coordinate to for use with VERTEX2F
  * @note - resolution for angle is 1° and rotation is clockwise
- * @note - angle should be limited to a (n*360)-1
  */
 void EVE_polar_cartesian(const uint16_t length, const uint16_t angle, int16_t * const p_xc0, int16_t * const p_yc0)
 {
     uint16_t anglev;
+    uint16_t clamped_length = length;
+
     anglev = angle % 360U;
+
+    if (length > 2000U)
+    {
+        clamped_length = 2000U;
+    }
 
     if (p_xc0 != NULL)
     {
-        int32_t calc = (int16_t) length;
+        int32_t calc = (int32_t) clamped_length;
         calc = (calc * (int32_t)sine_table[anglev]);
         calc = (calc >= 0) ? ((calc + 63) / 127) : ((calc - 63) / 127);
         *p_xc0 = (int16_t) calc;
@@ -130,7 +137,7 @@ void EVE_polar_cartesian(const uint16_t length, const uint16_t angle, int16_t * 
         anglev = anglev + 270U;
         anglev = anglev % 360U;
 
-        int32_t calc = (int16_t) length;
+        int32_t calc = (int32_t) clamped_length;
         calc = (calc * (int32_t)sine_table[anglev]);
         calc = (calc >= 0) ? ((calc + 63) / 127) : ((calc - 63) / 127);
         *p_yc0 = (int16_t) calc;
@@ -282,29 +289,29 @@ void EVE_calibrate_manual(const uint16_t width, const uint16_t height)
     divi = ((touch_x[0U] - touch_x[2U]) * (touch_y[1U] - touch_y[2U])) - ((touch_x[1U] - touch_x[2U]) * (touch_y[0U] - touch_y[2U]));
 
     tmp = (((display_x[0U] - display_x[2U]) * (touch_y[1U] - touch_y[2U])) -
-           ((display_x[1U] - display_x[2U]) * (touch_y[0U] - touch_y[2U])));
+        ((display_x[1U] - display_x[2U]) * (touch_y[0U] - touch_y[2U])));
     trans_matrix[0U] = (int32_t) (((int64_t) tmp * 65536) / divi);
 
     tmp = (((touch_x[0U] - touch_x[2U]) * (display_x[1U] - display_x[2U])) -
-           ((display_x[0U] - display_x[2U]) * (touch_x[1U] - touch_x[2U])));
+        ((display_x[0U] - display_x[2U]) * (touch_x[1U] - touch_x[2U])));
     trans_matrix[1U] = (int32_t) (((int64_t) tmp * 65536) / divi);
 
     tmp = ((touch_y[0U] * (((touch_x[2U] * display_x[1U]) - (touch_x[1U] * display_x[2U])))) +
-           (touch_y[1U] * (((touch_x[0U] * display_x[2U]) - (touch_x[2U] * display_x[0U])))) +
-           (touch_y[2U] * (((touch_x[1U] * display_x[0U]) - (touch_x[0U] * display_x[1U])))));
+        (touch_y[1U] * (((touch_x[0U] * display_x[2U]) - (touch_x[2U] * display_x[0U])))) +
+        (touch_y[2U] * (((touch_x[1U] * display_x[0U]) - (touch_x[0U] * display_x[1U])))));
     trans_matrix[2U] = (int32_t) (((int64_t) tmp * 65536) / divi);
 
     tmp = (((display_y[0U] - display_y[2U]) * (touch_y[1U] - touch_y[2U])) -
-           ((display_y[1U] - display_y[2U]) * (touch_y[0U] - touch_y[2U])));
+        ((display_y[1U] - display_y[2U]) * (touch_y[0U] - touch_y[2U])));
     trans_matrix[3U] = (int32_t) (((int64_t) tmp * 65536) / divi);
 
     tmp = (((touch_x[0U] - touch_x[2U]) * (display_y[1U] - display_y[2U])) -
-           ((display_y[0U] - display_y[2U]) * (touch_x[1U] - touch_x[2U])));
+        ((display_y[0U] - display_y[2U]) * (touch_x[1U] - touch_x[2U])));
     trans_matrix[4U] = (int32_t) (((int64_t) tmp * 65536) / divi);
 
     tmp = ((touch_y[0U] * (((touch_x[2U] * display_y[1U]) - (touch_x[1U] * display_y[2U])))) +
-           (touch_y[1U] * (((touch_x[0U] * display_y[2U]) - (touch_x[2U] * display_y[0U])))) +
-           (touch_y[2U] * (((touch_x[1U] * display_y[0U]) - (touch_x[0U] * display_y[1U])))));
+        (touch_y[1U] * (((touch_x[0U] * display_y[2U]) - (touch_x[2U] * display_y[0U])))) +
+        (touch_y[2U] * (((touch_x[1U] * display_y[0U]) - (touch_x[0U] * display_y[1U])))));
     trans_matrix[5U] = (int32_t) (((int64_t) tmp * 65536) / divi);
 
     EVE_memWrite32(REG_TOUCH_TRANSFORM_A, i32_to_u32(trans_matrix[0U]));

@@ -15,12 +15,15 @@ It contains code for and has been used with various micro-controllers and displa
 
 The TFTs tested so far:
 
-VM820C + 7" 1024x600 + cap-touch
+- VM820C + 7" 1024x600 + cap-touch  
+- VM820C + 10" 1280x800 + cap-touch  
+- VM820B10A - display module, 10" 1280x800 + cap-touch  
+- RVT101HVBNWC00-B https://riverdi.com/product/rvt101hvbnwc00-b/  
 
 
 ## This is version 6
 
-This is version 6 of this code library and this is the initial upload.
+This is version 6 of this code library and it will replace V5.
 
 
 ## Structure
@@ -30,12 +33,20 @@ This library currently has nine files that I hope are named to make clear what t
 - EVE.h - this has all defines for FT81x / BT81x / BT82x itself, so here are options, registers, commands and macros defined
 - EVE_commands.c - this has all the API functions that are to be called from an application
 - EVE_commands.h - this contains the prototypes for the functions in EVE_commands.c
+- EVE_commands_BT82x.c - BT82x specific functions  
+- EVE_commands_BT82x.h - BT82x specific prototypes and macros  
+- EVE_commands_BT82x_patch.c - the BT820 has an extension API and here are the functions that have been made available so far  
+- EVE_commands_BT82x_patch.h - BT82x macros and function prototypes for patches  
 - EVE_config.h - this has all the parameters for the numerous supported display modules, here is definded which set of parameters is to be used
 - EVE_target.c - this has non-portable specific code for a number of supported controllers, mostly to support DMA
 - EVE_target.h - this has non-portable pin defines and code as "static inline" functions for all supported controllers
 - EVE_target.cpp - this is for Arduino C++ targets
 - EVE_cpp_wrapper.cpp - this is for Arduino C++ targets
 - EVE_cpp_wrapper.h - this is for Arduino C++ targets
+- EVE_dl_commands.c - display list commands, formerly part of EVE_commands.c
+- EVE_dl_commands.h - prototypes and macros ...
+- EVE_lib_private.c - helper functions used by other modules
+- EVE_lib_private.h - prototypes and macros ...
 
 Addtionally there are these two:
 - EVE_supplemental.c
@@ -45,6 +56,9 @@ This has the prototype and implementation for extra functions, so far:
 - EVE_widget_circle() - widget function to draw a circle
 - EVE_widget_rectangle() - widget function to draw a rectangle
 - EVE_polar_cartesian() - calculate coordinates from an angle and a length
+- EVE_calibrate_write() - to write out all calibration values with one line
+- EVE_calibrate_read() - to read all calibration values with one line
+- EVE_calibrate_manual() - does what the name implies, of limited use since CMD_CALIBRATESUB was added, needs a rework
 
 ## Examples
 
@@ -95,23 +109,23 @@ It is possible to use two or more DMA transfers to the FIFO to build a single di
 You could for example do this, spread over three consecutive calls:
 ````
 EVE_start_cmd_burst();
-EVE_cmd_dl_burst(CMD_DLSTART);
-EVE_cmd_dl_burst(DL_CLEAR_COLOR_RGB | WHITE);
+EVE_cmd_dl(CMD_DLSTART);
+EVE_cmd_dl(DL_CLEAR_COLOR_RGB | WHITE);
 EVE_end_cmd_burst();
 ````
 
 ````
 EVE_start_cmd_burst();
-EVE_cmd_dl_burst(DL_CLEAR | CLR_COL | CLR_STN | CLR_TAG);
-EVE_color_rgb_burst(BLACK);
+EVE_cmd_dl(DL_CLEAR | CLR_COL | CLR_STN | CLR_TAG);
+EVE_color_rgb(BLACK);
 EVE_end_cmd_burst();
 ````
 
 ````
 EVE_start_cmd_burst();
-EVE_cmd_text_burst(5, 15, 28, 0, "Hello there!");
-EVE_cmd_dl_burst(DL_DISPLAY);
-EVE_cmd_dl_burst(CMD_SWAP);
+EVE_cmd_text(5, 15, 28, 0, "Hello there!");
+EVE_cmd_dl(DL_DISPLAY);
+EVE_cmd_dl(CMD_SWAP);
 EVE_end_cmd_burst();
 ````
 
